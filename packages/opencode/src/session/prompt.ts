@@ -1345,6 +1345,24 @@ export namespace SessionPrompt {
           synthetic: true,
         })
       }
+      if (input.agent.name === "game") {
+        userMessage.parts.push({
+          id: Identifier.ascending("part"),
+          messageID: userMessage.info.id,
+          sessionID: userMessage.info.sessionID,
+          type: "text",
+          text: `<system-reminder>
+Game mode is active. You are the Guide of the Research Realm.
+- Stay in character: use exploration/discovery language with a light touch.
+- Track which region(s) the Explorer is currently in (Spark Chamber, Archive Labyrinth, Hypothesis Forge, Experiment Grounds, Revelation Hall, Chronicle Tower).
+- Use TodoWrite to maintain the Explorer's Journal — artifacts collected across regions.
+- When a region's key artifacts are complete, give a brief "region solved" acknowledgment.
+- When doing technical work (code, stats), be direct and precise — the game layer pauses during execution.
+- The Explorer may move freely between regions. Adapt, don't block.
+</system-reminder>`,
+          synthetic: true,
+        })
+      }
       return input.messages
     }
 
@@ -1455,6 +1473,27 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       userMessage.parts.push(part)
       return input.messages
     }
+
+    // Game mode reminder
+    if (input.agent.name === "game") {
+      userMessage.parts.push({
+        id: Identifier.ascending("part"),
+        messageID: userMessage.info.id,
+        sessionID: userMessage.info.sessionID,
+        type: "text",
+        text: `<system-reminder>
+Game mode is active. You are the Guide of the Research Realm.
+- Stay in character: use exploration/discovery language with a light touch.
+- Track which region(s) the Explorer is currently in (Spark Chamber, Archive Labyrinth, Hypothesis Forge, Experiment Grounds, Revelation Hall, Chronicle Tower).
+- Use TodoWrite to maintain the Explorer's Journal — artifacts collected across regions.
+- When a region's key artifacts are complete, give a brief "region solved" acknowledgment.
+- When doing technical work (code, stats), be direct and precise — the game layer pauses during execution.
+- The Explorer may move freely between regions. Adapt, don't block.
+</system-reminder>`,
+        synthetic: true,
+      })
+    }
+
     return input.messages
   }
 
