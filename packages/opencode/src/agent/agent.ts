@@ -76,7 +76,7 @@ export namespace Agent {
     const result: Record<string, Info> = {
       build: {
         name: "build",
-        description: "The default agent. Executes tools based on configured permissions.",
+        description: "The default research agent. Executes tools for data analysis, coding, and research tasks based on configured permissions.",
         options: {},
         permission: PermissionNext.merge(
           defaults,
@@ -91,7 +91,7 @@ export namespace Agent {
       },
       plan: {
         name: "plan",
-        description: "Plan mode. Disallows all edit tools.",
+        description: "Plan mode. Read-only analysis and research planning. Disallows all edit tools.",
         options: {},
         permission: PermissionNext.merge(
           defaults,
@@ -114,7 +114,7 @@ export namespace Agent {
       },
       general: {
         name: "general",
-        description: `General-purpose agent for researching complex questions and executing multi-step tasks. Use this agent to execute multiple units of work in parallel.`,
+        description: `General-purpose agent for investigating complex research questions and executing multi-step tasks. Use this agent to execute multiple units of work in parallel.`,
         permission: PermissionNext.merge(
           defaults,
           PermissionNext.fromConfig({
@@ -148,7 +148,7 @@ export namespace Agent {
           }),
           user,
         ),
-        description: `Fast agent specialized for exploring codebases. Use this when you need to quickly find files by patterns (eg. "src/components/**/*.tsx"), search code for keywords (eg. "API endpoints"), or answer questions about the codebase (eg. "how do API endpoints work?"). When calling this agent, specify the desired thoroughness level: "quick" for basic searches, "medium" for moderate exploration, or "very thorough" for comprehensive analysis across multiple locations and naming conventions.`,
+        description: `Fast agent specialized for exploring codebases and research projects. Use this when you need to quickly find files by patterns (eg. "src/analysis/**/*.py"), search code for keywords (eg. "preprocessing pipeline"), or answer questions about the project (eg. "how is the data loaded?"). When calling this agent, specify the desired thoroughness level: "quick" for basic searches, "medium" for moderate exploration, or "very thorough" for comprehensive analysis across multiple locations and naming conventions.`,
         prompt: PROMPT_EXPLORE,
         options: {},
         mode: "subagent",
