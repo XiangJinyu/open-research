@@ -1,0 +1,12 @@
+- Search academic papers using Semantic Scholar and OpenAlex — two free, comprehensive scholarly databases
+- Returns paper titles, authors, abstracts, citation counts, publication years, and direct links
+- Semantic Scholar provides AI-generated TLDRs and high-quality relevance ranking
+- OpenAlex covers 250M+ works and provides broad coverage across all disciplines
+
+Usage notes:
+  - Use 'source' parameter to pick a specific backend: 'semantic_scholar' (default, best relevance), 'openalex' (broadest coverage), or 'both' (combined results)
+  - Use 'year' parameter to filter by publication year or range (e.g., "2020-2024")
+  - Use 'limit' to control result count (default: 10, max: 20)
+  - Fields of study filtering available via 'fieldsOfStudy' (e.g., "Computer Science", "Biology")
+  - For literature reviews, use source 'both' to maximize coverage
+  - For quick targeted searches, 'semantic_scholar' gives the most relevant results with TLDRs
