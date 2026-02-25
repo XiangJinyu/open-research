@@ -1335,13 +1335,36 @@ export namespace SessionPrompt {
         })
       }
       const wasPlan = input.messages.some((msg) => msg.info.role === "assistant" && msg.info.agent === "plan")
-      if (wasPlan && input.agent.name === "build") {
+      if (wasPlan && input.agent.name === "research") {
         userMessage.parts.push({
           id: Identifier.ascending("part"),
           messageID: userMessage.info.id,
           sessionID: userMessage.info.sessionID,
           type: "text",
           text: BUILD_SWITCH,
+          synthetic: true,
+        })
+      }
+      if (input.agent.name === "research") {
+        userMessage.parts.push({
+          id: Identifier.ascending("part"),
+          messageID: userMessage.info.id,
+          sessionID: userMessage.info.sessionID,
+          type: "text",
+          text: `<system-reminder>
+Research mode is active. When running empirical research, follow this pipeline:
+
+**8 Phases**: Idea Input → Repo Init → Baselines → Proposed Method → Optimization (≤2 iters) → Effectiveness Evaluation → Analysis (ablation/sensitivity/diagnostics) → Visualization → Paper Writing
+
+**Key conventions**:
+- Each experiment produces RESULTS.json (config + metrics, 4 decimal places) and REPORT.md (200-400 words: design, results, analysis)
+- Use plan.json to track task status — update status to "completed" and fill summary after each task
+- Every phase ends with a git commit; commit messages include key metric numbers
+- Effectiveness evaluation: check each Success Criterion (✓/✗/?), output verdict "good" or "BAD"
+- Negative results are still valuable — always complete all analysis and paper writing even if verdict is BAD
+- Use papersearch tool for literature; use bash for running experiments and data analysis
+- Maintain reproducibility: record all hyperparameters, random seeds, and environment details
+</system-reminder>`,
           synthetic: true,
         })
       }
@@ -1472,6 +1495,31 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       })
       userMessage.parts.push(part)
       return input.messages
+    }
+
+    // Research mode reminder
+    if (input.agent.name === "research") {
+      userMessage.parts.push({
+        id: Identifier.ascending("part"),
+        messageID: userMessage.info.id,
+        sessionID: userMessage.info.sessionID,
+        type: "text",
+        text: `<system-reminder>
+Research mode is active. When running empirical research, follow this pipeline:
+
+**8 Phases**: Idea Input → Repo Init → Baselines → Proposed Method → Optimization (≤2 iters) → Effectiveness Evaluation → Analysis (ablation/sensitivity/diagnostics) → Visualization → Paper Writing
+
+**Key conventions**:
+- Each experiment produces RESULTS.json (config + metrics, 4 decimal places) and REPORT.md (200-400 words: design, results, analysis)
+- Use plan.json to track task status — update status to "completed" and fill summary after each task
+- Every phase ends with a git commit; commit messages include key metric numbers
+- Effectiveness evaluation: check each Success Criterion (✓/✗/?), output verdict "good" or "BAD"
+- Negative results are still valuable — always complete all analysis and paper writing even if verdict is BAD
+- Use papersearch tool for literature; use bash for running experiments and data analysis
+- Maintain reproducibility: record all hyperparameters, random seeds, and environment details
+</system-reminder>`,
+        synthetic: true,
+      })
     }
 
     // Game mode reminder

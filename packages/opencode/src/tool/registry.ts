@@ -139,8 +139,8 @@ export namespace ToolRegistry {
     const result = await Promise.all(
       tools
         .filter((t) => {
-          // Enable websearch/codesearch for zen users OR via enable flag
-          if (t.id === "codesearch" || t.id === "websearch") {
+          // codesearch still requires Exa
+          if (t.id === "codesearch") {
             return model.providerID === "opencode" || Flag.OPENCODE_ENABLE_EXA
           }
 

@@ -75,8 +75,8 @@ export namespace Agent {
     const user = PermissionNext.fromConfig(cfg.permission ?? {})
 
     const result: Record<string, Info> = {
-      build: {
-        name: "build",
+      research: {
+        name: "research",
         description: "The default research agent. Executes tools for data analysis, coding, and research tasks based on configured permissions.",
         options: {},
         permission: PermissionNext.merge(
@@ -275,7 +275,7 @@ export namespace Agent {
     return pipe(
       await state(),
       values(),
-      sortBy([(x) => (cfg.default_agent ? x.name === cfg.default_agent : x.name === "build"), "desc"]),
+      sortBy([(x) => (cfg.default_agent ? x.name === cfg.default_agent : x.name === "research"), "desc"]),
     )
   }
 
