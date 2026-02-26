@@ -211,12 +211,13 @@ export const PaperSearchTool = Tool.define("papersearch", async () => {
         metadata: { query: params.query, source: params.source },
       })
 
-      const source = params.source ?? "semantic_scholar"
+      const source = params.source ?? "both"
       const limit = Math.min(params.limit ?? 10, 20)
       const { signal, clearTimeout } = abortAfterAny(30000, ctx.abort)
 
       try {
         let papers: Paper[] = []
+        const warnings: string[] = []
 
         if (source === "semantic_scholar" || source === "both") {
           try {
@@ -227,8 +228,12 @@ export const PaperSearchTool = Tool.define("papersearch", async () => {
             )
             papers.push(...results)
           } catch (e) {
-            if (source === "semantic_scholar") throw e
-            papers.push({ title: `[Semantic Scholar error: ${e instanceof Error ? e.message : String(e)}]`, authors: [], source: "semantic_scholar" })
+            const msg = e instanceof Error ? e.message : String(e)
+            if (source === "semantic_scholar") {
+              warnings.push(`Semantic Scholar unavailable: ${msg}`)
+            } else {
+              warnings.push(`Semantic Scholar unavailable (${msg}), showing OpenAlex results only`)
+            }
           }
         }
 
@@ -241,8 +246,12 @@ export const PaperSearchTool = Tool.define("papersearch", async () => {
             )
             papers.push(...results)
           } catch (e) {
-            if (source === "openalex") throw e
-            papers.push({ title: `[OpenAlex error: ${e instanceof Error ? e.message : String(e)}]`, authors: [], source: "openalex" })
+            const msg = e instanceof Error ? e.message : String(e)
+            if (source === "openalex") {
+              warnings.push(`OpenAlex unavailable: ${msg}`)
+            } else {
+              warnings.push(`OpenAlex unavailable (${msg}), showing Semantic Scholar results only`)
+            }
           }
         }
 
@@ -251,18 +260,22 @@ export const PaperSearchTool = Tool.define("papersearch", async () => {
         papers = dedup(papers)
 
         if (papers.length === 0) {
+          const fallback = warnings.length
+            ? `Search failed.\n${warnings.join("\n")}\nTry again later or use different keywords.`
+            : "No papers found. Try different keywords or broaden the search."
           return {
-            output: "No papers found. Try different keywords or broaden the search.",
+            output: fallback,
             title: `Paper search: ${params.query}`,
             metadata: {},
           }
         }
 
+        const warningBlock = warnings.length ? `Note: ${warnings.join("; ")}\n\n` : ""
         const header = `Found ${papers.length} papers for "${params.query}"${params.year ? ` (year: ${params.year})` : ""}:\n`
         const body = papers.map((p, i) => formatPaper(p, i)).join("\n\n")
 
         return {
-          output: header + "\n" + body,
+          output: warningBlock + header + "\n" + body,
           title: `Paper search: ${params.query}`,
           metadata: {},
         }
