@@ -1,6 +1,7 @@
 import z from "zod"
 import path from "path"
 import os from "os"
+import fs from "fs/promises"
 import { Config } from "../config/config"
 import { Instance } from "../project/instance"
 import { NamedError } from "@opencode-ai/util/error"
@@ -13,6 +14,8 @@ import { Bus } from "@/bus"
 import { Session } from "@/session"
 import { Discovery } from "./discovery"
 import { Glob } from "../util/glob"
+
+import BUNDLED_LAB_JOURNAL from "./bundled/lab-journal/SKILL.txt"
 
 export namespace Skill {
   const log = Log.create({ service: "skill" })
@@ -49,7 +52,26 @@ export namespace Skill {
   const OPENCODE_SKILL_PATTERN = "{skill,skills}/**/SKILL.md"
   const SKILL_PATTERN = "**/SKILL.md"
 
+  const BUNDLED_SKILLS: Record<string, string> = {
+    "lab-journal": BUNDLED_LAB_JOURNAL,
+  }
+
+  async function ensureBundledSkills() {
+    const skillsDir = path.join(Global.Path.config, "skills")
+    for (const [name, content] of Object.entries(BUNDLED_SKILLS)) {
+      const dest = path.join(skillsDir, name, "SKILL.md")
+      await fs.mkdir(path.dirname(dest), { recursive: true })
+      const existing = await Filesystem.readText(dest).catch(() => undefined)
+      if (existing !== content) {
+        await Filesystem.write(dest, content)
+        log.info("installed bundled skill", { name, path: dest })
+      }
+    }
+  }
+
   export const state = Instance.state(async () => {
+    await ensureBundledSkills()
+
     const skills: Record<string, Info> = {}
     const dirs = new Set<string>()
 

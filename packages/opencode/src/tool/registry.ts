@@ -22,6 +22,8 @@ import { Plugin } from "../plugin"
 import { WebSearchTool } from "./websearch"
 import { CodeSearchTool } from "./codesearch"
 import { PaperSearchTool } from "./papersearch"
+import { JournalTool } from "./journal"
+import { ChallengeTool } from "./challenge"
 import { Flag } from "@/flag/flag"
 import { Log } from "@/util/log"
 import { LspTool } from "./lsp"
@@ -115,6 +117,8 @@ export namespace ToolRegistry {
       WebSearchTool,
       CodeSearchTool,
       PaperSearchTool,
+      JournalTool,
+      ChallengeTool,
       SkillTool,
       ApplyPatchTool,
       ...(Flag.OPENCODE_EXPERIMENTAL_LSP_TOOL ? [LspTool] : []),

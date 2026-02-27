@@ -1,0 +1,11 @@
+Present a thinking challenge to the Explorer in Game mode.
+
+Use this for Decode Moments (invitations to think before seeing analysis) and Boss Challenges (checkpoint reflections when clearing a region).
+
+The challenge is presented as an interactive prompt — the Explorer types their answer, which is returned to you for evaluation. This is NOT a blocking gate: if the Explorer dismisses the challenge, you receive "skipped" and should continue normally.
+
+Parameters:
+- type: "decode" (thinking invitation) or "boss" (region checkpoint)
+- region: Which region this challenge belongs to
+- prompt: The challenge question text
+- hint: Optional hint if the Explorer asks for help

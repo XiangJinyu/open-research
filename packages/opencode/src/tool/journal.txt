@@ -1,0 +1,13 @@
+Update the Explorer's Journal — the persistent game state tracker in Game mode.
+
+Call this tool whenever the game state changes: entering a new region, collecting an artifact, clearing a boss, discovering a secret passage, or any notable event.
+
+Parameters:
+- region: The region the Explorer is currently in. One of: "spark_chamber", "archive_labyrinth", "hypothesis_forge", "experiment_grounds", "revelation_hall", "chronicle_tower"
+- artifacts: Full list of all artifacts across all regions, each with { region, name, collected }
+- bossCleared: Object mapping region names to boolean (true if boss challenge completed)
+- secretPassages: Array of discovered secret passages with { name, explored }
+- notification: A short event description shown as a toast (e.g. "Artifact collected: Research Question")
+
+Call this tool at the START of each response to keep the Journal visible and up-to-date.
+Do NOT render ASCII progress panels in text — use this tool instead.

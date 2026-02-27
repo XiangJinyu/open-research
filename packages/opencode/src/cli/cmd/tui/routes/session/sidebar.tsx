@@ -4,13 +4,22 @@ import { createStore } from "solid-js/store"
 import { useTheme } from "../../context/theme"
 import { Locale } from "@/util/locale"
 import path from "path"
-import type { AssistantMessage } from "@opencode-ai/sdk/v2"
+import type { AssistantMessage, ToolPart } from "@opencode-ai/sdk/v2"
 import { Global } from "@/global"
 import { Installation } from "@/installation"
 import { useKeybind } from "../../context/keybind"
 import { useDirectory } from "../../context/directory"
 import { useKV } from "../../context/kv"
 import { TodoItem } from "../../component/todo-item"
+
+const JOURNAL_REGIONS = [
+  { id: "spark_chamber",      icon: "🔥", label: "Spark",      total: 3 },
+  { id: "archive_labyrinth",  icon: "📚", label: "Archive",    total: 3 },
+  { id: "hypothesis_forge",   icon: "🔨", label: "Hypothesis", total: 3 },
+  { id: "experiment_grounds", icon: "🧪", label: "Experiment", total: 3 },
+  { id: "revelation_hall",    icon: "💡", label: "Revelation",  total: 2 },
+  { id: "chronicle_tower",    icon: "📜", label: "Chronicle",  total: 2 },
+] as const
 
 export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
   const sync = useSync()
@@ -20,11 +29,30 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
   const todo = createMemo(() => sync.data.todo[props.sessionID] ?? [])
   const messages = createMemo(() => sync.data.message[props.sessionID] ?? [])
 
+  const journalState = createMemo(() => {
+    const msgs = messages()
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      const parts = sync.data.part[msgs[i].id] ?? []
+      for (let j = parts.length - 1; j >= 0; j--) {
+        const p = parts[j] as ToolPart
+        if (p.type === "tool" && p.tool === "journal" && p.state?.status === "completed" && p.state.input) {
+          return p.state.input as {
+            region: string
+            artifacts: Array<{ region: string; name: string; collected: boolean }>
+            bossCleared?: Record<string, boolean>
+          }
+        }
+      }
+    }
+    return null
+  })
+
   const [expanded, setExpanded] = createStore({
     mcp: true,
     diff: true,
     todo: true,
     lsp: true,
+    journal: true,
   })
 
   // Sort MCP servers alphabetically for consistent display order
@@ -210,6 +238,42 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
                 </For>
               </Show>
             </box>
+            <Show when={journalState()}>
+              <box>
+                <box
+                  flexDirection="row"
+                  gap={1}
+                  onMouseDown={() => setExpanded("journal", !expanded.journal)}
+                >
+                  <text fg={theme.text}>{expanded.journal ? "▼" : "▶"}</text>
+                  <text fg={theme.text}>
+                    <b>Journal</b>
+                  </text>
+                </box>
+                <Show when={expanded.journal}>
+                  <For each={JOURNAL_REGIONS}>
+                    {(r) => {
+                      const js = journalState()!
+                      const collected = js.artifacts.filter((a) => a.region === r.id && a.collected).length
+                      const cleared = js.bossCleared?.[r.id] ?? false
+                      const isCurrent = r.id === js.region
+                      const pct = Math.round((collected / r.total) * 4)
+                      const bar = "█".repeat(pct) + "░".repeat(4 - pct)
+                      return (
+                        <box flexDirection="row" gap={1}>
+                          <text fg={isCurrent ? theme.text : theme.textMuted}>
+                            {isCurrent
+                              ? <b>▸{r.icon} {r.label.padEnd(11)} {bar} {collected}/{r.total}{cleared ? " ✓" : ""}</b>
+                              : <span>{" "}{r.icon} {r.label.padEnd(11)} {bar} {collected}/{r.total}{cleared ? " ✓" : ""}</span>
+                            }
+                          </text>
+                        </box>
+                      )
+                    }}
+                  </For>
+                </Show>
+              </box>
+            </Show>
             <Show when={todo().length > 0 && todo().some((t) => t.status !== "completed")}>
               <box>
                 <box

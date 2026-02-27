@@ -1,0 +1,150 @@
+---
+name: lab-journal
+description: >
+  Persistent experiment tracking for long-horizon research. Proactively records
+  experiment intent, method, evidence, and interpretation into a filesystem-based
+  lab journal so future sessions can reconstruct the full research trajectory.
+---
+
+# Lab Journal
+
+Maintain a persistent lab journal on the filesystem. Proactively capture what
+was tried, observed, and concluded — so future sessions with no memory of the
+past can reconstruct the full research trajectory.
+
+## Location
+
+The journal lives at `{project-root}/lab-journal/`. If no journal exists yet,
+create it:
+
+```bash
+mkdir -p lab-journal/{experiments,tables}
+```
+
+Then write an initial `summary.md`:
+
+```markdown
+# Lab Journal
+
+Initialized YYYY-MM-DD. No experiments yet.
+```
+
+Directory structure:
+
+```
+{project-root}/lab-journal/
+├── summary.md            # rolling high-level summary (cold-start doc)
+├── index.json            # derived DAG index — never edit directly
+├── experiments/
+│   ├── 001-{slug}.md
+│   └── ...
+└── tables/
+    └── {benchmark}.csv
+```
+
+## Experiment File
+
+Each experiment is `experiments/NNN-{slug}.md`:
+
+```markdown
+---
+id: "NNN"
+slug: short-descriptive-name
+type: hypothesis | optimization | exploration
+status: pending | running | completed | abandoned
+created: YYYY-MM-DD
+concluded: YYYY-MM-DD
+depends_on: []
+conclusion_type: confirmed | rejected | inconclusive | quantitative | insight
+conclusion: "one-line takeaway"
+tags: [relevant, keywords]
+commit: abc1234
+---
+
+# NNN: Title
+
+## Question
+Falsifiable proposition, optimization target, or open-ended inquiry.
+
+## Method
+Enough to reproduce: model, params, dataset, eval metric, command/script path.
+
+## Evidence
+Key numbers inline. Full output as path reference.
+
+## Interpretation
+What the evidence means. Why it matters.
+
+## Next
+What this suggests trying next, with forward-references to future experiment IDs.
+```
+
+## When to Record
+
+Record when ANY of these happen — don't wait to be asked:
+
+- User runs a benchmark or evaluation
+- User compares two approaches
+- User tries a config change and checks results
+- User says "let's try..." or "what if we..."
+- User abandons an approach (record why)
+
+Tell the user: "Logged as experiment NNN."
+
+## index.json
+
+`index.json` is derived from experiment frontmatter. Rebuild it by scanning all
+`experiments/*.md`, extracting frontmatter fields, and computing `leads_to`
+from `depends_on` links:
+
+```json
+{
+  "experiments": [
+    {
+      "id": "001",
+      "slug": "baseline-gpt4o",
+      "type": "exploration",
+      "status": "completed",
+      "conclusion_type": "quantitative",
+      "conclusion": "GPT-4o baseline achieves 88.7% on MMLU",
+      "depends_on": [],
+      "leads_to": ["002", "003"],
+      "tags": ["baseline", "mmlu"],
+      "created": "2026-02-24"
+    }
+  ]
+}
+```
+
+Rebuild after every new experiment by scanning all markdown files.
+
+## Comparison Tables
+
+When multiple experiments measure the same benchmark, create or update
+`tables/{benchmark}.csv` with one row per experiment:
+
+```csv
+exp_id,slug,model,strategy,score,commit,date
+001,baseline-gpt4o,gpt4o,cot,88.7,abc1234,2026-02-24
+002,stem-fewshot,gpt4o,domain-cot,90.1,def5678,2026-02-25
+```
+
+## Rolling Summary
+
+Update `summary.md` every ~5 new experiments or when the user asks:
+
+1. **Current state** — what we know now
+2. **Key findings** — 3-5 most important results
+3. **Open questions** — what hasn't been answered
+4. **Suggested next** — based on the DAG of results
+
+This is the cold-start document. A future agent with no memory should be able
+to continue the research after reading only this file.
+
+## Session Start
+
+When beginning work on an existing project with a `lab-journal/`:
+
+1. Read `summary.md` for current state
+2. Read `index.json` for structural queries (dependencies, leaf nodes)
+3. Continue from where the last session left off

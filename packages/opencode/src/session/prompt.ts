@@ -1363,7 +1363,10 @@ Research mode is active. When running empirical research, follow this pipeline:
 - Effectiveness evaluation: check each Success Criterion (✓/✗/?), output verdict "good" or "BAD"
 - Negative results are still valuable — always complete all analysis and paper writing even if verdict is BAD
 - Use papersearch tool for literature; use bash for running experiments and data analysis
+- Reading arXiv papers: use webfetch on ar5iv.labs.arxiv.org/html/{id} for full-text HTML (e.g. ar5iv.labs.arxiv.org/html/2303.08774). To download LaTeX source: bash curl -o paper.tar.gz https://arxiv.org/e-print/{id} && mkdir paper_src && tar -xzf paper.tar.gz -C paper_src
 - Maintain reproducibility: record all hyperparameters, random seeds, and environment details
+
+- Use the lab-journal skill to proactively track experiments in \`lab-journal/\`. On session start, read \`summary.md\` first.
 </system-reminder>`,
           synthetic: true,
         })
@@ -1375,23 +1378,27 @@ Research mode is active. When running empirical research, follow this pipeline:
           sessionID: userMessage.info.sessionID,
           type: "text",
           text: `<system-reminder>
-Game mode is active. You are the Guide of the Research Realm. Core mechanics to follow EVERY turn:
-
-1. CODEX FIRST: Start EVERY response with the Explorer's Codex (ASCII progress panel). Track artifacts via TodoWrite. Keep counts accurate.
-
-2. DECODE MOMENTS: At key decision points (after reading papers, before hypothesizing, after getting results), pose a short thinking challenge BEFORE giving your analysis. Frame as invitation — if Explorer says "just tell me", comply immediately.
-
-3. SECRET PASSAGES: When you find a genuinely surprising cross-domain connection or contradiction, present it as a "🚪 Secret Passage discovered!" moment. Max 1 per session. Let Explorer choose to explore or skip.
-
-4. REGION BOSS: When ALL artifacts for a region are collected, trigger the Boss challenge (defined in your system prompt per region). Not a gate — Explorer can skip. Mark region CLEARED in Codex after.
-
-5. JOURNEY LOG: When reaching Chronicle Tower with most regions cleared, offer a ~15-line narrative retrospective of the entire research journey.
-
-Behavioral reminders:
-- Technical execution (code, stats, tool calls) = direct and precise. Game layer pauses during execution.
-- Never block the Explorer. Challenges are invitations, not gates. "Skip" is always valid.
-- Light metaphors, not heavy roleplay. No "Brave explorer! Sacred Scroll of P-Values!"
-- Explorer moves freely between regions. Celebrate nonlinear paths.
+Game mode reminders:
+- MUST call "journal" tool at the START of every response. Do NOT render ASCII progress panels manually.
+- Use "challenge" tool (not text questions) for Decode Moments and Boss Challenges.
+- Challenges are invitations, not gates. "Skip" is always valid.
+- Technical execution = direct and precise. Game layer pauses during code/stats.
+- Use the lab-journal skill to track experiments when they happen.
+</system-reminder>`,
+          synthetic: true,
+        })
+      }
+      if (input.agent.name === "review") {
+        userMessage.parts.push({
+          id: Identifier.ascending("part"),
+          messageID: userMessage.info.id,
+          sessionID: userMessage.info.sessionID,
+          type: "text",
+          text: `<system-reminder>
+Review mode is active.
+- Read the FULL paper before reviewing. Prefer TeX source (bash curl arxiv.org/src/{id}) over webfetch.
+- Use papersearch to verify novelty and missing related work.
+- Be specific — cite sections/tables/figures, not vague judgments.
 </system-reminder>`,
           synthetic: true,
         })
@@ -1526,7 +1533,10 @@ Research mode is active. When running empirical research, follow this pipeline:
 - Effectiveness evaluation: check each Success Criterion (✓/✗/?), output verdict "good" or "BAD"
 - Negative results are still valuable — always complete all analysis and paper writing even if verdict is BAD
 - Use papersearch tool for literature; use bash for running experiments and data analysis
+- Reading arXiv papers: use webfetch on ar5iv.labs.arxiv.org/html/{id} for full-text HTML (e.g. ar5iv.labs.arxiv.org/html/2303.08774). To download LaTeX source: bash curl -o paper.tar.gz https://arxiv.org/e-print/{id} && mkdir paper_src && tar -xzf paper.tar.gz -C paper_src
 - Maintain reproducibility: record all hyperparameters, random seeds, and environment details
+
+- Use the lab-journal skill to proactively track experiments in \`lab-journal/\`. On session start, read \`summary.md\` first.
 </system-reminder>`,
         synthetic: true,
       })
@@ -1540,23 +1550,27 @@ Research mode is active. When running empirical research, follow this pipeline:
         sessionID: userMessage.info.sessionID,
         type: "text",
         text: `<system-reminder>
-Game mode is active. You are the Guide of the Research Realm. Core mechanics to follow EVERY turn:
-
-1. CODEX FIRST: Start EVERY response with the Explorer's Codex (ASCII progress panel). Track artifacts via TodoWrite. Keep counts accurate.
-
-2. DECODE MOMENTS: At key decision points (after reading papers, before hypothesizing, after getting results), pose a short thinking challenge BEFORE giving your analysis. Frame as invitation — if Explorer says "just tell me", comply immediately.
-
-3. SECRET PASSAGES: When you find a genuinely surprising cross-domain connection or contradiction, present it as a "🚪 Secret Passage discovered!" moment. Max 1 per session. Let Explorer choose to explore or skip.
-
-4. REGION BOSS: When ALL artifacts for a region are collected, trigger the Boss challenge (defined in your system prompt per region). Not a gate — Explorer can skip. Mark region CLEARED in Codex after.
-
-5. JOURNEY LOG: When reaching Chronicle Tower with most regions cleared, offer a ~15-line narrative retrospective of the entire research journey.
-
-Behavioral reminders:
-- Technical execution (code, stats, tool calls) = direct and precise. Game layer pauses during execution.
-- Never block the Explorer. Challenges are invitations, not gates. "Skip" is always valid.
-- Light metaphors, not heavy roleplay. No "Brave explorer! Sacred Scroll of P-Values!"
-- Explorer moves freely between regions. Celebrate nonlinear paths.
+Game mode reminders:
+- MUST call "journal" tool at the START of every response. Do NOT render ASCII progress panels manually.
+- Use "challenge" tool (not text questions) for Decode Moments and Boss Challenges.
+- Challenges are invitations, not gates. "Skip" is always valid.
+- Technical execution = direct and precise. Game layer pauses during code/stats.
+- Use the lab-journal skill to track experiments when they happen.
+</system-reminder>`,
+        synthetic: true,
+      })
+    }
+    if (input.agent.name === "review") {
+      userMessage.parts.push({
+        id: Identifier.ascending("part"),
+        messageID: userMessage.info.id,
+        sessionID: userMessage.info.sessionID,
+        type: "text",
+        text: `<system-reminder>
+Review mode is active.
+- Read the FULL paper before reviewing. Prefer TeX source (bash curl arxiv.org/src/{id}) over webfetch.
+- Use papersearch to verify novelty and missing related work.
+- Be specific — cite sections/tables/figures, not vague judgments.
 </system-reminder>`,
         synthetic: true,
       })

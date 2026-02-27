@@ -45,6 +45,8 @@ import type { WebFetchTool } from "@/tool/webfetch"
 import type { TaskTool } from "@/tool/task"
 import type { QuestionTool } from "@/tool/question"
 import type { SkillTool } from "@/tool/skill"
+import type { JournalTool } from "@/tool/journal"
+import type { ChallengeTool } from "@/tool/challenge"
 import { useKeyboard, useRenderer, useTerminalDimensions, type JSX } from "@opentui/solid"
 import { useSDK } from "@tui/context/sdk"
 import { useCommandDialog } from "@tui/component/dialog-command"
@@ -1503,6 +1505,12 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
         <Match when={props.part.tool === "skill"}>
           <Skill {...toolprops} />
         </Match>
+        <Match when={props.part.tool === "journal"}>
+          <Journal {...toolprops} />
+        </Match>
+        <Match when={props.part.tool === "challenge"}>
+          <Challenge {...toolprops} />
+        </Match>
         <Match when={true}>
           <GenericTool {...toolprops} />
         </Match>
@@ -2160,6 +2168,137 @@ function Skill(props: ToolProps<typeof SkillTool>) {
     <InlineTool icon="→" pending="Loading skill..." complete={props.input.name} part={props.part}>
       Skill "{props.input.name}"
     </InlineTool>
+  )
+}
+
+const REGION_META: Record<string, { icon: string; label: string; total: number; color: "error" | "info" | "warning" | "success" | "accent" | "textMuted" }> = {
+  spark_chamber:      { icon: "🔥", label: "Spark Chamber",      total: 3, color: "error" },
+  archive_labyrinth:  { icon: "📚", label: "Archive Labyrinth",  total: 3, color: "info" },
+  hypothesis_forge:   { icon: "🔨", label: "Hypothesis Forge",   total: 3, color: "warning" },
+  experiment_grounds: { icon: "🧪", label: "Experiment Grounds", total: 3, color: "success" },
+  revelation_hall:    { icon: "💡", label: "Revelation Hall",     total: 2, color: "accent" },
+  chronicle_tower:    { icon: "📜", label: "Chronicle Tower",    total: 2, color: "textMuted" },
+}
+
+const REGION_ORDER = [
+  "spark_chamber",
+  "archive_labyrinth",
+  "hypothesis_forge",
+  "experiment_grounds",
+  "revelation_hall",
+  "chronicle_tower",
+] as const
+
+function Journal(props: ToolProps<typeof JournalTool>) {
+  const { theme } = useTheme()
+
+  createEffect(() => {
+    const n = props.input.notification
+    if (n && (n.includes("Artifact") || n.includes("CLEARED") || n.includes("collected"))) {
+      process.stdout.write("\x07")
+    }
+  })
+
+  const regions = createMemo(() =>
+    REGION_ORDER.map((r) => {
+      const meta = REGION_META[r]!
+      const collected = (props.input.artifacts ?? []).filter((a) => a.region === r && a.collected).length
+      const cleared = props.input.bossCleared?.[r] ?? false
+      const isCurrent = r === props.input.region
+      return { id: r, ...meta, collected, cleared, isCurrent }
+    }),
+  )
+
+  return (
+    <Switch>
+      <Match when={props.input.region}>
+        <BlockTool title="# Explorer's Journal" part={props.part}>
+          <box gap={0}>
+            <For each={regions()}>
+              {(r) => {
+                const bar = () => {
+                  const filled = "█".repeat(Math.round((r.collected / r.total) * 8))
+                  const empty = "░".repeat(8 - filled.length)
+                  return filled + empty
+                }
+                return (
+                  <box flexDirection="row" gap={1}>
+                    <text fg={r.isCurrent ? theme[r.color] : theme.textMuted}>
+                      {r.isCurrent ? <b>▸ {r.icon} {r.label.padEnd(20)} {bar()} {r.collected}/{r.total}{r.cleared ? " ✓" : ""}</b> : <span>{" "} {r.icon} {r.label.padEnd(20)} {bar()} {r.collected}/{r.total}{r.cleared ? " ✓" : ""}</span>}
+                    </text>
+                  </box>
+                )
+              }}
+            </For>
+            <Show when={(props.input.secretPassages ?? []).length > 0}>
+              <box paddingTop={1}>
+                <text fg={theme.textMuted}><b>Secret Passages</b></text>
+                <For each={props.input.secretPassages ?? []}>
+                  {(sp) => (
+                    <text fg={sp.explored ? theme.accent : theme.textMuted}>
+                      {"  "}{sp.explored ? "✦" : "○"} {sp.name}
+                    </text>
+                  )}
+                </For>
+              </box>
+            </Show>
+            <Show when={props.input.notification}>
+              <box paddingTop={1}>
+                <text fg={theme.warning}><b>★ {props.input.notification}</b></text>
+              </box>
+            </Show>
+          </box>
+        </BlockTool>
+      </Match>
+      <Match when={true}>
+        <InlineTool icon="📖" pending="Updating journal..." complete={false} part={props.part}>
+          Updating journal...
+        </InlineTool>
+      </Match>
+    </Switch>
+  )
+}
+
+function Challenge(props: ToolProps<typeof ChallengeTool>) {
+  const { theme } = useTheme()
+  const regionMeta = createMemo(() => REGION_META[props.input.region ?? "spark_chamber"])
+  const header = createMemo(() =>
+    props.input.type === "boss" ? "⚔ Boss Challenge" : "✧ Decode Moment",
+  )
+
+  return (
+    <Switch>
+      <Match when={props.metadata.answer}>
+        <BlockTool title={`# ${header()}`} part={props.part}>
+          <box gap={1}>
+            <box>
+              <text fg={theme[regionMeta()?.color ?? "info"]}>
+                <b>{regionMeta()?.icon} {regionMeta()?.label}</b>
+              </text>
+            </box>
+            <box>
+              <text fg={theme.text} wrapMode="word">{props.input.prompt}</text>
+            </box>
+            <box>
+              <text fg={theme.textMuted}>Explorer's answer:</text>
+              <text fg={props.metadata.answer === "(skipped)" ? theme.textMuted : theme.success} wrapMode="word">
+                {props.metadata.answer === "(skipped)" ? props.metadata.answer : <i>{props.metadata.answer}</i>}
+              </text>
+            </box>
+          </box>
+        </BlockTool>
+      </Match>
+      <Match when={true}>
+        <InlineTool
+          icon={props.input.type === "boss" ? "⚔" : "✧"}
+          pending={`${header()}...`}
+          complete={false}
+          part={props.part}
+        >
+          {header()}
+        </InlineTool>
+      </Match>
+    </Switch>
   )
 }
 

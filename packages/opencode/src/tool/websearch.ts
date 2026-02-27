@@ -9,62 +9,59 @@ interface SearchResult {
   snippet: string
 }
 
-function parseHTML(html: string): SearchResult[] {
+function stripHTML(s: string): string {
+  return s
+    .replace(/<[^>]*>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#x27;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .trim()
+}
+
+function decodeDDGUrl(raw: string): string {
+  const match = raw.match(/uddg=([^&]+)/)
+  if (match) return decodeURIComponent(match[1])
+  if (raw.startsWith("http")) return raw
+  if (raw.startsWith("//")) return "https:" + raw
+  return raw
+}
+
+function parseLiteHTML(html: string): SearchResult[] {
   const results: SearchResult[] = []
 
-  // DuckDuckGo lite returns results in <a class="result-link"> and surrounding elements
-  // We use two strategies to maximize extraction
+  const rows = html.split(/<tr>/i).slice(1)
+  let i = 0
+  while (i < rows.length) {
+    const row = rows[i]
 
-  // Strategy 1: result__a links (standard DDG HTML)
-  const linkPattern = /<a[^>]*class="[^"]*result__a[^"]*"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi
-  const snippetPattern = /<a[^>]*class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/a>/gi
-
-  const links: { url: string; title: string }[] = []
-  let m: RegExpExecArray | null
-  while ((m = linkPattern.exec(html)) !== null) {
-    links.push({
-      url: decodeURIComponent(m[1].replace(/.*uddg=/, "").replace(/&.*/, "")),
-      title: m[2].replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#x27;/g, "'").replace(/&quot;/g, '"').trim(),
-    })
-  }
-
-  const snippets: string[] = []
-  while ((m = snippetPattern.exec(html)) !== null) {
-    snippets.push(
-      m[1].replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#x27;/g, "'").replace(/&quot;/g, '"').trim(),
+    const linkMatch = row.match(
+      /<a[^>]*rel="nofollow"[^>]*href="([^"]*)"[^>]*class\s*=\s*['"]result-link['"][^>]*>([\s\S]*?)<\/a>/i,
+    ) ?? row.match(
+      /<a[^>]*class\s*=\s*['"]result-link['"][^>]*rel="nofollow"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/i,
     )
-  }
 
-  for (let i = 0; i < links.length; i++) {
-    results.push({
-      title: links[i].title,
-      url: links[i].url,
-      snippet: snippets[i] ?? "",
-    })
-  }
+    if (linkMatch) {
+      const url = decodeDDGUrl(linkMatch[1])
+      const title = stripHTML(linkMatch[2])
 
-  if (results.length > 0) return results
+      let snippet = ""
+      for (let j = i + 1; j < Math.min(i + 4, rows.length); j++) {
+        if (rows[j].includes("result-snippet")) {
+          const snipMatch = rows[j].match(/<td[^>]*class\s*=\s*['"]result-snippet['"][^>]*>([\s\S]*?)<\/td>/i)
+          if (snipMatch) snippet = stripHTML(snipMatch[1])
+          break
+        }
+      }
 
-  // Strategy 2: fallback — parse <a> tags inside result blocks from the lite endpoint
-  const litePattern = /<a[^>]*rel="nofollow"[^>]*href="([^"]*)"[^>]*class="result-link"[^>]*>([\s\S]*?)<\/a>/gi
-  while ((m = litePattern.exec(html)) !== null) {
-    results.push({
-      url: m[1],
-      title: m[2].replace(/<[^>]*>/g, "").trim(),
-      snippet: "",
-    })
-  }
-
-  // Strategy 3: very minimal fallback — grab any links that look like results
-  if (results.length === 0) {
-    const genericPattern = /<td[^>]*>[\s\S]*?<a[^>]*href="(https?:\/\/[^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?<\/td>[\s\S]*?<td[^>]*class="result-snippet"[^>]*>([\s\S]*?)<\/td>/gi
-    while ((m = genericPattern.exec(html)) !== null) {
-      results.push({
-        url: m[1],
-        title: m[2].replace(/<[^>]*>/g, "").trim(),
-        snippet: m[3].replace(/<[^>]*>/g, "").trim(),
-      })
+      if (url.startsWith("http") && !url.includes("duckduckgo.com")) {
+        results.push({ title, url, snippet })
+      }
     }
+    i++
   }
 
   return results
@@ -110,13 +107,12 @@ export const WebSearchTool = Tool.define("websearch", async () => {
       const { signal, clearTimeout } = abortAfterAny(25000, ctx.abort)
 
       try {
-        const response = await fetch("https://html.duckduckgo.com/html/", {
-          method: "POST",
+        const url = `https://lite.duckduckgo.com/lite/?q=${encodeURIComponent(params.query)}`
+        const response = await fetch(url, {
           headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "User-Agent":
+              "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
           },
-          body: `q=${encodeURIComponent(params.query)}&b=`,
           signal,
         })
 
@@ -124,11 +120,16 @@ export const WebSearchTool = Tool.define("websearch", async () => {
 
         if (!response.ok) {
           const errorText = await response.text()
-          throw new Error(`DuckDuckGo search error (${response.status}): ${errorText}`)
+          throw new Error(`DuckDuckGo search error (${response.status}): ${errorText.slice(0, 200)}`)
         }
 
         const html = await response.text()
-        const results = parseHTML(html).slice(0, limit)
+
+        if (html.includes("anomaly")) {
+          throw new Error("DuckDuckGo rate limit hit (captcha). Try again later.")
+        }
+
+        const results = parseLiteHTML(html).slice(0, limit)
 
         return {
           output: formatResults(results, params.query),

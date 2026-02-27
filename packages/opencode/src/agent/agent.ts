@@ -14,6 +14,7 @@ import PROMPT_EXPLORE from "./prompt/explore.txt"
 import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
 import PROMPT_GAME from "./prompt/game.txt"
+import PROMPT_REVIEW from "./prompt/review.txt"
 import { PermissionNext } from "@/permission/next"
 import { mergeDeep, pipe, sortBy, values } from "remeda"
 import { Global } from "@/global"
@@ -118,6 +119,21 @@ export namespace Agent {
         description: "Game mode. Turns research into an exploration game with six discoverable regions — from spark to chronicle.",
         options: {},
         prompt: PROMPT_GAME,
+        permission: PermissionNext.merge(
+          defaults,
+          PermissionNext.fromConfig({
+            question: "allow",
+          }),
+          user,
+        ),
+        mode: "primary",
+        native: true,
+      },
+      review: {
+        name: "review",
+        description: "Paper review mode. Provides rigorous academic reviews following top-venue standards (NeurIPS/ICLR/ICML). Also helps with rebuttals.",
+        options: {},
+        prompt: PROMPT_REVIEW,
         permission: PermissionNext.merge(
           defaults,
           PermissionNext.fromConfig({
