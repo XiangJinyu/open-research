@@ -14,8 +14,40 @@ past can reconstruct the full research trajectory.
 
 ## Location
 
-The journal lives at `{project-root}/lab-journal/`. If no journal exists yet,
-create it:
+The journal lives at `{project-root}/lab-journal/`. Directory structure:
+
+```
+{project-root}/lab-journal/
+├── summary.md            # rolling high-level summary (cold-start doc)
+├── index.json            # derived DAG index — never edit directly
+├── experiments/
+│   ├── 001-{slug}.md
+│   └── ...
+└── tables/
+    └── {benchmark}.csv
+```
+
+## CLI
+
+A bundled Python script `cli.py` (zero external dependencies) is available in
+this skill's directory. Use it via:
+
+```bash
+# Initialize a new journal at {git-root}/lab-journal/
+python <skill-dir>/cli.py init [path]
+
+# Scaffold a new experiment (auto-increments NNN)
+python <skill-dir>/cli.py new <slug> --type hypothesis --depends 001 002
+
+# Rebuild index.json from all experiments/*.md frontmatter
+python <skill-dir>/cli.py build-index [path]
+```
+
+Replace `<skill-dir>` with the skill's base directory path shown when loading
+this skill. You can also do all of these operations manually with bash/read/write
+if Python is not available.
+
+To initialize manually without the CLI:
 
 ```bash
 mkdir -p lab-journal/{experiments,tables}
@@ -27,19 +59,6 @@ Then write an initial `summary.md`:
 # Lab Journal
 
 Initialized YYYY-MM-DD. No experiments yet.
-```
-
-Directory structure:
-
-```
-{project-root}/lab-journal/
-├── summary.md            # rolling high-level summary (cold-start doc)
-├── index.json            # derived DAG index — never edit directly
-├── experiments/
-│   ├── 001-{slug}.md
-│   └── ...
-└── tables/
-    └── {benchmark}.csv
 ```
 
 ## Experiment File
@@ -116,7 +135,8 @@ from `depends_on` links:
 }
 ```
 
-Rebuild after every new experiment by scanning all markdown files.
+Rebuild after every new experiment using `python <skill-dir>/cli.py build-index`,
+or manually by scanning all markdown files.
 
 ## Comparison Tables
 
@@ -131,7 +151,7 @@ exp_id,slug,model,strategy,score,commit,date
 
 ## Rolling Summary
 
-Update `summary.md` every ~5 new experiments or when the user asks:
+Update `summary.md` every ~3 new experiments or when the user asks:
 
 1. **Current state** — what we know now
 2. **Key findings** — 3-5 most important results
