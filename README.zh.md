@@ -1,6 +1,16 @@
-<p align="center">
-  <h1 align="center">OpenResearch</h1>
-</p>
+<pre align="center">
+  ___  ____  _____ _   _
+ / _ \|  _ \| ____| \ | |
+| | | | |_) |  _| |  \| |
+| |_| |  __/| |___| |\  |
+ \___/|_|   |_____|_| \_|
+
+ ____  _____ ____  _____    _    ____   ____ _   _
+|  _ \| ____/ ___|| ____|  / \  |  _ \ / ___| | | |
+| |_) |  _| \___ \|  _|   / _ \ | |_) | |   | |_| |
+|  _ <| |___ ___) | |___ / ___ \|  _ <| |___|  _  |
+|_| \_\_____|____/|_____/_/   \_\_| \_\\____|_| |_|
+</pre>
 
 <p align="center">开源的 AI 研究助手。</p>
 
@@ -14,8 +24,6 @@
 <p align="center">
   <a href="README.md">English</a> · <a href="README.zh.md">简体中文</a>
 </p>
-
-[![OpenResearch Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://xiangjinyu.github.io/open-research/)
 
 ---
 
