@@ -82,6 +82,18 @@ export class FeishuAdapter implements ChannelAdapter {
     })
   }
 
+  async updateCard(chatId: string, messageId: string, status: string, text: string): Promise<void> {
+    if (!messageId) return
+    const truncated = truncateText(text)
+    const cardContent = buildSplitCard(status, truncated)
+    await this.client.im.message.patch({
+      path: { message_id: messageId },
+      data: {
+        content: JSON.stringify(cardContent),
+      },
+    })
+  }
+
   private async handleMessageReceive(data: any): Promise<void> {
     const message = data?.message
     if (!message) return
@@ -141,6 +153,34 @@ function buildCard(text: string): object {
         },
       ],
     },
+  }
+}
+
+// 工具状态和正文分成两个独立 element，互不影响各自的 markdown 渲染
+function buildSplitCard(status: string, text: string): object {
+  const elements: object[] = []
+
+  if (status) {
+    elements.push({
+      tag: "markdown",
+      content: status,
+    })
+  }
+
+  if (text) {
+    elements.push({
+      tag: "markdown",
+      content: text,
+    })
+  }
+
+  if (elements.length === 0) {
+    elements.push({ tag: "markdown", content: "思考中..." })
+  }
+
+  return {
+    schema: "2.0",
+    body: { elements },
   }
 }
 

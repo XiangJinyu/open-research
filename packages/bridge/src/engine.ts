@@ -163,38 +163,22 @@ export class BridgeEngine {
     }
   }
 
-  private renderCard(session: ActiveSession): string {
+  private renderStatus(session: ActiveSession): string {
     const lines: string[] = []
-
-    // Running tools — show spinner-like status
     for (const label of session.activeTools.values()) {
       lines.push(`⏳ ${label}`)
     }
-
-    // Completed tools — collapsed summary
     if (session.completedTools.length > 0) {
       lines.push(session.completedTools.map((t) => `✅ ${t}`).join("\n"))
     }
-
-    // Separator between tool status and text
-    if (lines.length > 0 && session.buffer) {
-      lines.push("---")
-    }
-
-    if (session.buffer) {
-      lines.push(session.buffer)
-    } else if (lines.length === 0) {
-      lines.push("思考中...")
-    }
-
     return lines.join("\n")
   }
 
   private async flushCard(session: ActiveSession): Promise<void> {
     if (!session.messageId) return
-    const content = this.renderCard(session)
+    const status = this.renderStatus(session)
     session.lastFlushAt = Date.now()
-    await session.adapter.updateText(session.chatId, session.messageId, content).catch(() => {})
+    await session.adapter.updateCard(session.chatId, session.messageId, status, session.buffer).catch(() => {})
   }
 
   private async handlePartUpdated(part: any): Promise<void> {
@@ -232,10 +216,11 @@ export class BridgeEngine {
     const session = this.activeSessions.get(sessionID)
     if (!session) return
 
-    // Final flush — show only the text, strip tool history
+    // Final flush — keep completed tool history, clear any still-running ones
     if (session.messageId) {
-      const content = session.buffer || "（无回复）"
-      await session.adapter.updateText(session.chatId, session.messageId, content).catch(() => {})
+      session.activeTools.clear()
+      const finalStatus = this.renderStatus(session)
+      await session.adapter.updateCard(session.chatId, session.messageId, finalStatus, session.buffer || "（无回复）").catch(() => {})
     }
 
     this.activeSessions.delete(sessionID)
