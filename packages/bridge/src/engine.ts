@@ -20,6 +20,8 @@ interface ActiveSession {
   lastFlushAt: number
   messageId: string | null
   adapter: ChannelAdapter
+  activeTools: Map<string, string>  // callID → display label
+  completedTools: string[]          // labels of finished tools
 }
 
 const THROTTLE_MS = 500
@@ -93,6 +95,8 @@ export class BridgeEngine {
       lastFlushAt: 0,
       messageId: messageId || null,
       adapter,
+      activeTools: new Map(),
+      completedTools: [],
     })
 
     // Send prompt
@@ -159,26 +163,68 @@ export class BridgeEngine {
     }
   }
 
+  private renderCard(session: ActiveSession): string {
+    const lines: string[] = []
+
+    // Running tools — show spinner-like status
+    for (const label of session.activeTools.values()) {
+      lines.push(`⏳ ${label}`)
+    }
+
+    // Completed tools — collapsed summary
+    if (session.completedTools.length > 0) {
+      lines.push(session.completedTools.map((t) => `✅ ${t}`).join("\n"))
+    }
+
+    // Separator between tool status and text
+    if (lines.length > 0 && session.buffer) {
+      lines.push("---")
+    }
+
+    if (session.buffer) {
+      lines.push(session.buffer)
+    } else if (lines.length === 0) {
+      lines.push("思考中...")
+    }
+
+    return lines.join("\n")
+  }
+
+  private async flushCard(session: ActiveSession): Promise<void> {
+    if (!session.messageId) return
+    const content = this.renderCard(session)
+    session.lastFlushAt = Date.now()
+    await session.adapter.updateText(session.chatId, session.messageId, content).catch(() => {})
+  }
+
   private async handlePartUpdated(part: any): Promise<void> {
     const session = this.activeSessions.get(part.sessionID)
     if (!session) return
 
     if (part.type === "text") {
-      // Accumulate text
       if (part.text) session.buffer = part.text
 
-      // Only flush when part is finalized (time.end present) or throttle window elapsed
       const now = Date.now()
       const isFinalized = !!part.time?.end
       const throttleElapsed = now - session.lastFlushAt >= THROTTLE_MS
 
-      if ((isFinalized || throttleElapsed) && session.buffer && session.messageId) {
-        session.lastFlushAt = now
-        await session.adapter.updateText(session.chatId, session.messageId, session.buffer).catch(() => {})
+      if (isFinalized || throttleElapsed) {
+        await this.flushCard(session)
       }
-    } else if (part.type === "tool" && part.state?.status === "completed") {
-      // Optional: append tool summary as a follow-up message
-      // We skip this to keep the card clean; tool use is reflected in the final text
+    } else if (part.type === "tool") {
+      const status = part.state?.status
+      const label = part.state?.title || part.tool
+
+      if (status === "running") {
+        session.activeTools.set(part.callID, label)
+        await this.flushCard(session)
+      } else if (status === "completed" || status === "error") {
+        session.activeTools.delete(part.callID)
+        if (status === "completed") {
+          session.completedTools.push(label)
+        }
+        await this.flushCard(session)
+      }
     }
   }
 
@@ -186,8 +232,10 @@ export class BridgeEngine {
     const session = this.activeSessions.get(sessionID)
     if (!session) return
 
-    if (session.buffer && session.messageId) {
-      await session.adapter.updateText(session.chatId, session.messageId, session.buffer).catch(() => {})
+    // Final flush — show only the text, strip tool history
+    if (session.messageId) {
+      const content = session.buffer || "（无回复）"
+      await session.adapter.updateText(session.chatId, session.messageId, content).catch(() => {})
     }
 
     this.activeSessions.delete(sessionID)
