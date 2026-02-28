@@ -1,8 +1,21 @@
-# OpenResearch
+<p align="center">
+  <h1 align="center">OpenResearch</h1>
+</p>
 
-[English](README.md) | [简体中文](README.zh.md)
+<p align="center">The open source AI research assistant.</p>
 
-**An AI research assistant for scientists and researchers.** — [Homepage](https://xiangjinyu.github.io/open-research/) Built on [OpenCode](https://github.com/anomalyco/opencode), extended with research-specific tools and workflows.
+<p align="center">
+  <a href="https://xiangjinyu.github.io/open-research/"><img alt="Homepage" src="https://img.shields.io/badge/homepage-open--research-blue?style=flat-square" /></a>
+  <a href="https://github.com/XiangJinyu/open-research/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/github/license/XiangJinyu/open-research?style=flat-square" /></a>
+  <a href="https://github.com/XiangJinyu/open-research/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/XiangJinyu/open-research?style=flat-square" /></a>
+  <a href="https://github.com/XiangJinyu/open-research/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/XiangJinyu/open-research?style=flat-square" /></a>
+</p>
+
+<p align="center">
+  <a href="README.md">English</a> · <a href="README.zh.md">简体中文</a>
+</p>
+
+[![OpenResearch Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://xiangjinyu.github.io/open-research/)
 
 ---
 
@@ -18,7 +31,7 @@ irm https://raw.githubusercontent.com/XiangJinyu/open-research/main/install.ps1 
 
 After install, run `openresearch` in any project directory.
 
-The install script respects `$OPENRESEARCH_INSTALL_DIR` to customize the install path.
+Set `$OPENRESEARCH_INSTALL_DIR` to customize the install path.
 
 ---
 
@@ -30,42 +43,41 @@ Switch between modes with the `Tab` key.
 |------|-------------|
 | **research** | Default. Full-access agent for running experiments, writing code, and analyzing data. |
 | **plan** | Read-only. Explore a project and design a research plan before touching anything. |
-| **review** | Paper review mode. Rigorous academic reviews following NeurIPS/ICLR/ICML standards. Also helps with rebuttals. |
-| **game** | Turns research into an exploration game with six discoverable regions — from spark to chronicle. |
+| **review** | Rigorous academic reviews following NeurIPS/ICLR/ICML standards. Also helps with rebuttals. |
+| **game** | Turns research into an exploration game with six discoverable regions. |
 
 ---
 
-### Research-Specific Tools
+### Research Tools
 
 **`papersearch`** — Search academic literature without leaving the terminal.
-- Backends: [Semantic Scholar](https://www.semanticscholar.org/) (best relevance, AI-generated TLDRs) and [OpenAlex](https://openalex.org/) (250M+ works, broadest coverage)
-- Filters: year range, field of study, result count
-- No API key required
+- [Semantic Scholar](https://www.semanticscholar.org/) — best relevance, AI-generated TLDRs
+- [OpenAlex](https://openalex.org/) — 250M+ works, broadest coverage
+- Filters: year range, field of study, result count. No API key required.
 
 **`websearch`** — Free web search via DuckDuckGo. No API key required.
 
-**Lab Journal** — Persistent experiment tracking across sessions (load via `/skill lab-journal`).
-- Records experiment intent, method, evidence, and interpretation
-- Maintains a rolling `summary.md` so future sessions can pick up where you left off
+**Lab Journal** — Persistent experiment tracking across sessions (load with `/skill lab-journal`).
+- Records intent, method, evidence, and interpretation per experiment
+- Rolling `summary.md` lets future sessions pick up where you left off
 - DAG-structured `index.json` tracks dependencies between experiments
-- Includes a CLI (`cli.py`) for scaffolding new experiments
 
 ---
 
 ### Scientific Rigor
 
-The research agent is prompted to:
+The agent is prompted to:
 
 - Distinguish established facts from preliminary findings and speculation
-- Flag methodological issues (flawed design, statistical errors, data leakage) proactively
-- Always check: Is this reproducible? Are random seeds set? Are dependencies pinned?
-- Investigate to find the truth rather than confirming assumptions
+- Flag methodological issues (experimental design, statistics, data leakage) proactively
+- Check reproducibility: random seeds, pinned dependencies, deterministic pipelines
+- Investigate before confirming assumptions
 
 ---
 
 ### Configuration
 
-OpenResearch is provider-agnostic and works with Claude, OpenAI, Gemini, and local models. See the [OpenCode documentation](https://opencode.ai/docs) for provider setup — the configuration format is identical.
+Provider-agnostic — works with Claude, OpenAI, Gemini, and local models. Configuration format follows [OpenCode](https://opencode.ai/docs).
 
 ---
 
@@ -73,4 +85,4 @@ OpenResearch is provider-agnostic and works with Claude, OpenAI, Gemini, and loc
 
 Pull requests welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
-**Based on:** [anomalyco/opencode](https://github.com/anomalyco/opencode) — MIT License
+Built on [anomalyco/opencode](https://github.com/anomalyco/opencode) · MIT License
