@@ -4,7 +4,7 @@
 $ErrorActionPreference = "Stop"
 
 $Repo       = "XiangJinyu/open-research"
-$BinaryName = "openresearch"
+$BinaryName = "research"
 $InstallDir = if ($env:OPENRESEARCH_INSTALL_DIR) { $env:OPENRESEARCH_INSTALL_DIR } else { "$env:USERPROFILE\.openresearch\bin" }
 
 function Info($msg)  { Write-Host $msg -ForegroundColor Cyan }
@@ -45,7 +45,7 @@ $extractDir = Join-Path $tmpDir "extracted"
 Expand-Archive -Path $archivePath -DestinationPath $extractDir -Force
 
 $srcBin = $null
-foreach ($name in @("openresearch.exe", "opencode.exe", "opencode")) {
+foreach ($name in @("research.exe", "openresearch.exe", "opencode.exe", "opencode")) {
     $candidate = Get-ChildItem -Path $extractDir -Recurse -Filter $name -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($candidate) { $srcBin = $candidate.FullName; break }
 }

@@ -37,7 +37,7 @@ curl -fsSL https://raw.githubusercontent.com/XiangJinyu/open-research/main/insta
 irm https://raw.githubusercontent.com/XiangJinyu/open-research/main/install.ps1 | iex
 ```
 
-After install, run `openresearch` in any project directory.
+After install, run `research` in any project directory.
 
 Set `$OPENRESEARCH_INSTALL_DIR` to customize the install path.
 

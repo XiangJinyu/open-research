@@ -37,7 +37,7 @@ curl -fsSL https://raw.githubusercontent.com/XiangJinyu/open-research/main/insta
 irm https://raw.githubusercontent.com/XiangJinyu/open-research/main/install.ps1 | iex
 ```
 
-安装完成后，在任意项目目录运行 `openresearch` 即可启动。
+安装完成后，在任意项目目录运行 `research` 即可启动。
 
 设置 `$OPENRESEARCH_INSTALL_DIR` 可自定义安装路径。
 

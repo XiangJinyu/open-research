@@ -2,7 +2,8 @@
 set -euo pipefail
 
 REPO="XiangJinyu/open-research"
-BINARY_NAME="openresearch"
+BINARY_NAME="research"        # installed command name
+ARCHIVE_PREFIX="openresearch" # release archive prefix (e.g. openresearch-darwin-arm64.zip)
 INSTALL_DIR="${OPENRESEARCH_INSTALL_DIR:-$HOME/.openresearch/bin}"
 TMP_DIR=""
 
@@ -75,7 +76,7 @@ main() {
   fi
   ok "  Version: ${version}"
 
-  archive_name="${BINARY_NAME}-${platform}"
+  archive_name="${ARCHIVE_PREFIX}-${platform}"
   case "$platform" in
     linux*) archive_name="${archive_name}.tar.gz" ;;
     *)      archive_name="${archive_name}.zip" ;;
@@ -96,18 +97,17 @@ main() {
 
   mkdir -p "$INSTALL_DIR"
 
-  local bin_name="openresearch"
-  [ "$platform" = "windows-x64" ] && bin_name="openresearch.exe"
+  local bin_name="research"
+  [ "$platform" = "windows-x64" ] && bin_name="research.exe"
 
   local src_name
-  if [ -f "openresearch" ] || [ -f "openresearch.exe" ]; then
-    src_name="$bin_name"
-  elif [ -f "opencode" ]; then
-    src_name="opencode"
-  elif [ -f "opencode.exe" ]; then
-    src_name="opencode.exe"
-  else
-    err "Binary not found in archive"; exit 1
+  if [ -f "research" ]; then src_name="research"
+  elif [ -f "research.exe" ]; then src_name="research.exe"
+  elif [ -f "openresearch" ]; then src_name="openresearch"
+  elif [ -f "openresearch.exe" ]; then src_name="openresearch.exe"
+  elif [ -f "opencode" ]; then src_name="opencode"
+  elif [ -f "opencode.exe" ]; then src_name="opencode.exe"
+  else err "Binary not found in archive"; exit 1
   fi
 
   cp "$src_name" "${INSTALL_DIR}/${bin_name}"
