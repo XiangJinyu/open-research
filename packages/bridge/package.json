@@ -1,0 +1,20 @@
+{
+  "name": "@opencode-ai/bridge",
+  "version": "1.2.10",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "typecheck": "tsgo --noEmit"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@opencode-ai/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "@typescript/native-preview": "catalog:"
+  }
+}
