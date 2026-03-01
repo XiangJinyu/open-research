@@ -3,9 +3,10 @@
 
 $ErrorActionPreference = "Stop"
 
-$Repo       = "XiangJinyu/open-research"
-$BinaryName = "research"
-$InstallDir = if ($env:OPENRESEARCH_INSTALL_DIR) { $env:OPENRESEARCH_INSTALL_DIR } else { "$env:USERPROFILE\.openresearch\bin" }
+$Repo          = "XiangJinyu/open-research"
+$BinaryName    = "research"        # installed command name
+$ArchivePrefix = "openresearch"    # release archive prefix (e.g. openresearch-windows-x64.zip)
+$InstallDir    = if ($env:OPENRESEARCH_INSTALL_DIR) { $env:OPENRESEARCH_INSTALL_DIR } else { "$env:USERPROFILE\.openresearch\bin" }
 
 function Info($msg)  { Write-Host $msg -ForegroundColor Cyan }
 function Ok($msg)    { Write-Host $msg -ForegroundColor Green }
@@ -26,7 +27,7 @@ try {
 }
 Ok "  Version: $version"
 
-$archiveName = "$BinaryName-windows-$arch.zip"
+$archiveName = "$ArchivePrefix-windows-$arch.zip"
 $downloadUrl = "https://github.com/$Repo/releases/download/$version/$archiveName"
 Info "Downloading $downloadUrl..."
 
