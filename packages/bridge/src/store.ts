@@ -64,4 +64,9 @@ export class SessionStore {
       this.persist()
     }
   }
+
+  delete(platform: string, chatId: string): void {
+    this.sessions.delete(this.key(platform, chatId))
+    this.persist()
+  }
 }

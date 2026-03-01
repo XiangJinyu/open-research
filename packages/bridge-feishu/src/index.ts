@@ -215,6 +215,7 @@ export async function main(): Promise<void> {
     adapters: [adapter],
     agent: process.env.RESEARCH_AGENT,
     model: process.env.RESEARCH_MODEL,
+    allowAllPermissions: process.env.RESEARCH_ALLOW_ALL_PERMISSIONS === "true",
   })
 
   await engine.start()

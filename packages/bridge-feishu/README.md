@@ -48,16 +48,54 @@ cp .env.example .env
 | `RESEARCH_AGENT` | — | 指定 agent（research/plan/review/game） |
 | `RESEARCH_MODEL` | — | 指定模型，格式 `providerID/modelID` |
 
-## 启动
+## 快速启动
+
+### 最简单（私聊 + 群聊全响应）
 
 ```bash
-# 方式一：使用 .env 文件
-bun run dev
+cd packages/bridge-feishu
+cp .env.example .env   # 填写 FEISHU_APP_ID / FEISHU_APP_SECRET
+bun run start
+```
 
-# 方式二：直接设置环境变量
+### 群聊仅 @机器人 触发
+
+```bash
+FEISHU_REQUIRE_MENTION=true bun run start
+```
+
+### 指定模型
+
+```bash
+RESEARCH_MODEL=anthropic/claude-sonnet-4-6 bun run start
+```
+
+### 指定 Agent
+
+```bash
+RESEARCH_AGENT=research bun run start   # research / plan / review / game
+```
+
+### 授予所有权限（无需运行时确认）
+
+```bash
+RESEARCH_ALLOW_ALL_PERMISSIONS=true bun run start
+```
+
+### 连接远程 research server
+
+```bash
+RESEARCH_SERVER_URL=http://10.0.0.1:4096 bun run start
+```
+
+### 一次性传入所有参数（不使用 .env）
+
+```bash
 FEISHU_APP_ID=cli_xxx \
 FEISHU_APP_SECRET=xxx \
 RESEARCH_SERVER_URL=http://127.0.0.1:4096 \
+FEISHU_REQUIRE_MENTION=true \
+RESEARCH_MODEL=anthropic/claude-sonnet-4-6 \
 bun run src/index.ts
 ```
 

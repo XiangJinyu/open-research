@@ -10,6 +10,8 @@ export interface BridgeOptions {
   agent?: string
   model?: string
   sessionDir?: string
+  /** 是否在 session 创建时授予所有工具权限，跳过运行时询问（默认 false） */
+  allowAllPermissions?: boolean
 }
 
 interface ActiveSession {
@@ -63,11 +65,24 @@ export class BridgeEngine {
     const adapter = this.options.adapters.find((a) => a.id === msg.platform)
     if (!adapter) return
 
+    // Built-in commands
+    const cmd = msg.text.trim().toLowerCase()
+    if (cmd === "/new" || cmd === "/reset") {
+      this.store.delete(msg.platform, msg.chatId)
+      await adapter.sendText(msg.chatId, "已开启新对话，上下文已清除。").catch(() => {})
+      return
+    }
+
     // Resolve or create a session
     let sessionId = this.store.get(msg.platform, msg.chatId)
     if (!sessionId) {
       console.log("[bridge] creating session...")
-      const res = await this.sdk.session.create({ title: `Bridge ${msg.platform}:${msg.chatId}` })
+      const res = await this.sdk.session.create({
+        title: `Bridge ${msg.platform}:${msg.chatId}`,
+        permission: this.options.allowAllPermissions
+          ? [{ permission: "*", pattern: "*", action: "allow" as const }]
+          : undefined,
+      })
       console.log("[bridge] session.create response:", JSON.stringify(res))
       if (res.error) {
         console.error("[bridge] failed to create session:", res.error)
