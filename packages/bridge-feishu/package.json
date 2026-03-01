@@ -5,6 +5,7 @@
   "license": "MIT",
   "scripts": {
     "start": "bash start.sh",
+    "daemon": "bash daemon.sh",
     "dev": "bun run src/index.ts",
     "typecheck": "tsgo --noEmit"
   },
