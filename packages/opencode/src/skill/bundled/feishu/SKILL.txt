@@ -1,0 +1,166 @@
+---
+name: feishu
+description: >
+  Feishu (Lark) platform operations for agents. Send messages, reply, add emoji
+  reactions, query group members, and read/create documents — all via a bundled
+  zero-dependency Python CLI.
+---
+
+# Feishu Skill
+
+Interact with the Feishu Open Platform directly from agent sessions. Use this
+skill whenever the user wants to:
+
+- Send or read messages in a Feishu chat
+- Add/remove emoji reactions on messages
+- Look up who is in a group chat
+- Create or read Feishu documents (飞书文档)
+- Browse files in Feishu Drive
+
+## Prerequisites
+
+Two environment variables must be present:
+
+```
+FEISHU_APP_ID=cli_xxxx
+FEISHU_APP_SECRET=xxxx
+```
+
+These come from the Feishu Open Platform app you created. The app must have the
+relevant permissions granted (see "Permissions" below).
+
+Tokens are cached automatically in `/tmp/feishu_token_cache.json` (2 h TTL),
+so no manual token management is needed.
+
+## CLI
+
+A bundled Python script `cli.py` (zero external dependencies) lives in this
+skill's directory. Invoke it as:
+
+```bash
+python <skill-dir>/cli.py <command> [options]
+```
+
+Replace `<skill-dir>` with the skill's base directory path shown when this skill
+is loaded.
+
+### Commands reference
+
+#### Messages
+
+```bash
+# Send a text message to a chat
+python <skill-dir>/cli.py send-message --chat-id <chat_id> --text "Hello!"
+
+# Reply to a specific message
+python <skill-dir>/cli.py reply-message --msg-id <message_id> --text "Got it."
+
+# List recent messages (newest first)
+python <skill-dir>/cli.py list-messages --chat-id <chat_id> --limit 20
+```
+
+#### Emoji reactions
+
+```bash
+# Add a reaction to a message
+python <skill-dir>/cli.py add-reaction --msg-id <message_id> --emoji THUMBSUP
+
+# Remove a reaction (need the reaction_id from add-reaction output)
+python <skill-dir>/cli.py del-reaction --msg-id <message_id> --reaction-id <reaction_id>
+```
+
+Common emoji names (verified): `THUMBSUP` `OK` `SMILE` `SURPRISED` `THINKING`
+Note: not all names are valid — if rejected with "reaction type is invalid", try `THUMBSUP` or `OK` as safe defaults.
+
+#### Group chats & members
+
+```bash
+# List all chats the bot can access
+python <skill-dir>/cli.py list-chats --limit 20
+
+# Get info about a specific chat
+python <skill-dir>/cli.py get-chat --chat-id <chat_id>
+
+# List members of a group chat
+python <skill-dir>/cli.py get-members --chat-id <chat_id> --limit 100
+```
+
+#### Documents (飞书文档)
+
+```bash
+# Create a new document (returns document_id and URL)
+python <skill-dir>/cli.py create-doc --title "My Report"
+
+# Create in a specific folder
+python <skill-dir>/cli.py create-doc --title "My Report" --folder-token <token>
+
+# Read a document's content as plain text
+python <skill-dir>/cli.py get-doc --doc-token <document_id>
+
+# List documents in Drive root or a folder
+python <skill-dir>/cli.py list-docs --limit 20
+python <skill-dir>/cli.py list-docs --folder-token <token>
+```
+
+## Output format
+
+All commands output JSON to stdout, making it easy to parse or display:
+
+```json
+// send-message
+{"message_id": "om_xxx", "chat_id": "oc_xxx", "create_time": "1700000000"}
+
+// get-members
+{
+  "total": 5,
+  "has_more": false,
+  "members": [
+    {"member_id": "ou_xxx", "name": "张三", "member_id_type": "open_id", ...}
+  ]
+}
+
+// create-doc
+{
+  "document_id": "doxcnXXX",
+  "title": "My Report",
+  "url": "https://docs.feishu.cn/docx/doxcnXXX"
+}
+```
+
+Errors are printed to stderr and exit with code 1.
+
+## Permissions required
+
+Configure these in Feishu Open Platform → Permissions & Scopes:
+
+| Feature          | Required permission scope              |
+|------------------|----------------------------------------|
+| Send message     | `im:message:send_as_bot`               |
+| Read messages    | `im:message`                           |
+| Reactions        | `im:message.reaction:write`            |
+| Group members    | `im:chat.members:read`                 |
+| Chat info        | `im:chat`                              |
+| Create document  | `docx:document`                        |
+| Read document    | `docx:document:readonly`               |
+| List Drive files | `drive:drive:readonly`                 |
+
+## When to use
+
+- User asks to "send a message to the team" → `send-message`
+- User asks to "react with thumbs up to that message" → `add-reaction`
+- User asks "who is in the project group?" → `get-members`
+- User asks to "write up a doc with the results" → `create-doc`, then guide
+  user to open the returned URL to edit further, or use the Feishu API's
+  block-append endpoint for programmatic content insertion
+- User asks to "read the spec doc" and provides a doc link → extract the
+  document_id from the URL and call `get-doc`
+
+## Notes
+
+- `chat_id` looks like `oc_xxxxxxxxxx`
+- `message_id` looks like `om_xxxxxxxxxx`
+- `document_id` (doc_token) looks like `doxcnXXXXXXX` or `Gxxxxxxxxxxxxx`
+- The bot must be added to a group before it can send messages there
+- Document write access (adding content blocks) beyond creating requires
+  additional API calls to `/docx/v1/documents/{id}/blocks` — not yet in this
+  CLI; create the doc then share the URL for manual editing

@@ -17,6 +17,8 @@ import { Glob } from "../util/glob"
 
 import BUNDLED_LAB_JOURNAL from "./bundled/lab-journal/SKILL.txt"
 import BUNDLED_LAB_JOURNAL_CLI from "./bundled/lab-journal/cli.py" with { type: "text" }
+import BUNDLED_FEISHU from "./bundled/feishu/SKILL.txt"
+import BUNDLED_FEISHU_CLI from "./bundled/feishu/cli.py" with { type: "text" }
 
 export namespace Skill {
   const log = Log.create({ service: "skill" })
@@ -57,6 +59,10 @@ export namespace Skill {
     "lab-journal": {
       skill: BUNDLED_LAB_JOURNAL,
       files: { "cli.py": BUNDLED_LAB_JOURNAL_CLI },
+    },
+    "feishu": {
+      skill: BUNDLED_FEISHU,
+      files: { "cli.py": BUNDLED_FEISHU_CLI },
     },
   }
 
