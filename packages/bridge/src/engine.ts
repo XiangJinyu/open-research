@@ -130,7 +130,7 @@ export class BridgeEngine {
 
     const promptRes = await this.sdk.session.prompt(promptParams)
     if (promptRes.error) {
-      console.error("[bridge] failed to send prompt:", promptRes.error)
+      console.error("[bridge] failed to send prompt:", JSON.stringify(promptRes.error, null, 2), "response:", JSON.stringify(promptRes.response?.status))
       if (messageId) {
         await adapter.updateText(msg.chatId, messageId, "抱歉，发送消息失败，请稍后再试。").catch(() => {})
       }
