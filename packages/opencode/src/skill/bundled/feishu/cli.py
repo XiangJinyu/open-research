@@ -8,6 +8,7 @@ Commands:
   send-message   --chat-id <id> --text <text> [--msg-type text|post]
   reply-message  --msg-id <id> --text <text>
   list-messages  --chat-id <id> [--limit 20]
+  download       --msg-id <id> --file-key <key> [--type image|file] [--output path]
   add-reaction   --msg-id <id> --emoji <THUMBSUP|OK|CLAPPING|...>
   del-reaction   --msg-id <id> --reaction-id <id>
   get-members    --chat-id <id> [--limit 100]
@@ -246,14 +247,21 @@ def cmd_list_messages(args):
             body = json.loads(m.get("body", {}).get("content", "{}"))
         except Exception:
             pass
-        out.append({
+        msg_type = m.get("msg_type")
+        entry = {
             "message_id": m.get("message_id"),
             "sender_id": m.get("sender", {}).get("id"),
             "sender_name": m.get("sender", {}).get("id_type"),
-            "msg_type": m.get("msg_type"),
+            "msg_type": msg_type,
             "text": _extract_text_from_content(body),
             "create_time": m.get("create_time"),
-        })
+        }
+        if msg_type == "image":
+            entry["image_key"] = body.get("image_key", "")
+        elif msg_type == "file":
+            entry["file_key"] = body.get("file_key", "")
+            entry["file_name"] = body.get("file_name", "")
+        out.append(entry)
     result = {"items": out}
     if data.get("has_more"):
         result["has_more"] = True
@@ -282,6 +290,30 @@ def cmd_del_reaction(args):
     res = api_delete(f"/im/v1/messages/{args.msg_id}/reactions/{args.reaction_id}")
     ok(res)
     print(f"Deleted reaction {args.reaction_id}")
+
+
+# ---------------------------------------------------------------------------
+# Commands — resources
+# ---------------------------------------------------------------------------
+
+def cmd_download(args):
+    token = get_token()
+    url = f"{BASE_URL}/im/v1/messages/{args.msg_id}/resources/{args.file_key}?type={args.type}"
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+    try:
+        with urllib.request.urlopen(req) as resp:
+            data = resp.read()
+    except urllib.error.HTTPError as e:
+        body = e.read().decode(errors="replace")
+        sys.exit(f"HTTP {e.code} download: {body}")
+
+    out = args.output or args.file_key
+    Path(out).parent.mkdir(parents=True, exist_ok=True)
+    Path(out).write_bytes(data)
+    print(json.dumps({
+        "path": str(Path(out).resolve()),
+        "size": len(data),
+    }, ensure_ascii=False, indent=2))
 
 
 # ---------------------------------------------------------------------------
@@ -470,6 +502,14 @@ def main():
     p.add_argument("--msg-id", required=True)
     p.add_argument("--reaction-id", required=True)
 
+    # download
+    p = sub.add_parser("download", help="Download a resource (image/file) from a message")
+    p.add_argument("--msg-id", required=True)
+    p.add_argument("--file-key", required=True)
+    p.add_argument("--type", default="file", choices=["image", "file"],
+                   help="Resource type: image or file (default: file)")
+    p.add_argument("--output", default=None, help="Output file path (default: file_key as filename)")
+
     # list-chats
     p = sub.add_parser("list-chats", help="List bot-accessible chats")
     p.add_argument("--limit", type=int, default=20)
@@ -521,6 +561,7 @@ def main():
         "list-messages": cmd_list_messages,
         "add-reaction": cmd_add_reaction,
         "del-reaction": cmd_del_reaction,
+        "download": cmd_download,
         "list-chats": cmd_list_chats,
         "get-chat": cmd_get_chat,
         "get-members": cmd_get_members,
