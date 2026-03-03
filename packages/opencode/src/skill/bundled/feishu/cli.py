@@ -8,6 +8,7 @@ Commands:
   send-message   --chat-id <id> --text <text> [--msg-type text|post]
   reply-message  --msg-id <id> --text <text>
   list-messages  --chat-id <id> [--limit 20]
+  download       --msg-id <id> --file-key <key> [--type image|file] [--output path]
   add-reaction   --msg-id <id> --emoji <THUMBSUP|OK|CLAPPING|...>
   del-reaction   --msg-id <id> --reaction-id <id>
   get-members    --chat-id <id> [--limit 100]
@@ -183,6 +184,50 @@ def cmd_reply_message(args):
     }, ensure_ascii=False, indent=2))
 
 
+def _extract_text_from_content(body):
+    """Extract text from message content. Supports text, post, and interactive (card) types."""
+    if body.get("text"):
+        return body.get("text", "")
+    # Post (富文本): {"zh_cn": {"content": [[{"tag": "text", "text": "..."}]]}}
+    for lang in ("zh_cn", "en_us", "ja_jp"):
+        blocks = body.get(lang, {}).get("content", [])
+        if blocks:
+            texts = _extract_from_blocks(blocks)
+            if texts:
+                return texts
+    # Card readback: {"title": ..., "elements": [[{tag: "text", text: "..."}]]}
+    elements = body.get("elements", [])
+    if elements:
+        texts = _extract_from_blocks(elements)
+        if texts:
+            title = body.get("title") or ""
+            return f"{title}\n{texts}".strip() if title else texts
+    # Card original: schema 2.0 with body.elements
+    inner = body.get("body", {}).get("elements", [])
+    parts = []
+    for el in inner:
+        if isinstance(el, dict):
+            if el.get("tag") == "markdown" and el.get("content"):
+                parts.append(el["content"])
+            elif el.get("tag") == "div":
+                t = el.get("text", {})
+                if isinstance(t, dict) and t.get("content"):
+                    parts.append(t["content"])
+    return "\n\n".join(parts) if parts else ""
+
+
+def _extract_from_blocks(blocks):
+    """Extract text from post-style blocks: [[{tag: "text", text: "..."}]]"""
+    texts = []
+    for block in blocks:
+        for node in block if isinstance(block, list) else [block]:
+            if isinstance(node, dict) and node.get("tag") == "text":
+                t = node.get("text", "")
+                if t.strip():
+                    texts.append(t)
+    return "\n".join(texts) if texts else ""
+
+
 def cmd_list_messages(args):
     params = {
         "container_id_type": "chat",
@@ -190,6 +235,8 @@ def cmd_list_messages(args):
         "page_size": min(args.limit, 50),
         "sort_type": "ByCreateTimeDesc",
     }
+    if args.page_token:
+        params["page_token"] = args.page_token
     res = api_get("/im/v1/messages", params)
     data = ok(res)
     items = data.get("items", [])
@@ -200,15 +247,28 @@ def cmd_list_messages(args):
             body = json.loads(m.get("body", {}).get("content", "{}"))
         except Exception:
             pass
-        out.append({
+        msg_type = m.get("msg_type")
+        entry = {
             "message_id": m.get("message_id"),
             "sender_id": m.get("sender", {}).get("id"),
             "sender_name": m.get("sender", {}).get("id_type"),
-            "msg_type": m.get("msg_type"),
-            "text": body.get("text", ""),
+            "msg_type": msg_type,
+            "text": _extract_text_from_content(body),
             "create_time": m.get("create_time"),
-        })
-    print(json.dumps(out, ensure_ascii=False, indent=2))
+        }
+        if msg_type == "image":
+            entry["image_key"] = body.get("image_key", "")
+        elif msg_type == "file":
+            entry["file_key"] = body.get("file_key", "")
+            entry["file_name"] = body.get("file_name", "")
+        out.append(entry)
+    result = {"items": out}
+    if data.get("has_more"):
+        result["has_more"] = True
+        result["page_token"] = data.get("page_token", "")
+    else:
+        result["has_more"] = False
+    print(json.dumps(result, ensure_ascii=False, indent=2))
 
 
 # ---------------------------------------------------------------------------
@@ -230,6 +290,30 @@ def cmd_del_reaction(args):
     res = api_delete(f"/im/v1/messages/{args.msg_id}/reactions/{args.reaction_id}")
     ok(res)
     print(f"Deleted reaction {args.reaction_id}")
+
+
+# ---------------------------------------------------------------------------
+# Commands — resources
+# ---------------------------------------------------------------------------
+
+def cmd_download(args):
+    token = get_token()
+    url = f"{BASE_URL}/im/v1/messages/{args.msg_id}/resources/{args.file_key}?type={args.type}"
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+    try:
+        with urllib.request.urlopen(req) as resp:
+            data = resp.read()
+    except urllib.error.HTTPError as e:
+        body = e.read().decode(errors="replace")
+        sys.exit(f"HTTP {e.code} download: {body}")
+
+    out = args.output or args.file_key
+    Path(out).parent.mkdir(parents=True, exist_ok=True)
+    Path(out).write_bytes(data)
+    print(json.dumps({
+        "path": str(Path(out).resolve()),
+        "size": len(data),
+    }, ensure_ascii=False, indent=2))
 
 
 # ---------------------------------------------------------------------------
@@ -405,6 +489,7 @@ def main():
     p = sub.add_parser("list-messages", help="List recent messages in a chat")
     p.add_argument("--chat-id", required=True)
     p.add_argument("--limit", type=int, default=20)
+    p.add_argument("--page-token", default=None, help="Token for next page (from previous response)")
 
     # add-reaction
     p = sub.add_parser("add-reaction", help="Add an emoji reaction to a message")
@@ -416,6 +501,14 @@ def main():
     p = sub.add_parser("del-reaction", help="Remove an emoji reaction")
     p.add_argument("--msg-id", required=True)
     p.add_argument("--reaction-id", required=True)
+
+    # download
+    p = sub.add_parser("download", help="Download a resource (image/file) from a message")
+    p.add_argument("--msg-id", required=True)
+    p.add_argument("--file-key", required=True)
+    p.add_argument("--type", default="file", choices=["image", "file"],
+                   help="Resource type: image or file (default: file)")
+    p.add_argument("--output", default=None, help="Output file path (default: file_key as filename)")
 
     # list-chats
     p = sub.add_parser("list-chats", help="List bot-accessible chats")
@@ -468,6 +561,7 @@ def main():
         "list-messages": cmd_list_messages,
         "add-reaction": cmd_add_reaction,
         "del-reaction": cmd_del_reaction,
+        "download": cmd_download,
         "list-chats": cmd_list_chats,
         "get-chat": cmd_get_chat,
         "get-members": cmd_get_members,
