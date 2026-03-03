@@ -35,14 +35,7 @@ export class BridgeEngine {
   private eventLoopRunning = false
 
   constructor(private readonly options: BridgeOptions) {
-    const serverOrigin = new URL(options.serverUrl).origin
-    const isLocal = /^https?:\/\/(127\.|localhost|0\.0\.0\.0|\[::1\])/.test(serverOrigin)
-    const directFetch: typeof globalThis.fetch = (input, init) => {
-      const opts: any = { ...init, timeout: false }
-      if (isLocal) opts.proxy = ""
-      return fetch(input, opts)
-    }
-    this.sdk = createOpencodeClient({ baseUrl: options.serverUrl, fetch: directFetch })
+    this.sdk = createOpencodeClient({ baseUrl: options.serverUrl })
     const sessionDir = options.sessionDir ?? join(homedir(), ".openresearch", "bridge")
     this.store = new SessionStore(sessionDir)
   }
