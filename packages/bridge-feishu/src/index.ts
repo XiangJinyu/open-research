@@ -1,13 +1,9 @@
 import * as lark from "@larksuiteoapi/node-sdk"
 import type { ChannelAdapter, InboundMessage } from "@opencode-ai/bridge"
 import { BridgeEngine } from "@opencode-ai/bridge"
-import { homedir } from "os"
-import { join } from "path"
-import { mkdirSync, writeFileSync } from "fs"
 
 // Feishu interactive card text limit is ~30KB; we leave some headroom
 const CARD_TEXT_LIMIT = 28 * 1024
-const DOWNLOAD_DIR = join(homedir(), ".openresearch", "bridge", "feishu-files")
 
 export interface FeishuAdapterOptions {
   appId: string
@@ -102,59 +98,41 @@ export class FeishuAdapter implements ChannelAdapter {
     const message = data?.message
     if (!message) return
 
+    // Skip messages from bots (sender_type === "bot")
     const senderType: string = data?.sender?.sender_type ?? ""
     if (senderType === "bot") return
 
     const senderId: string = data?.sender?.sender_id?.open_id ?? ""
-    const chatId: string = message.chat_id ?? ""
-    const chatType: string = message.chat_type ?? "p2p"
 
-    let parsed: Record<string, unknown> = {}
+    // Only handle text messages
+    if (message.message_type !== "text") return
+
+    // Parse message content
+    let text: string
     try {
-      parsed = JSON.parse(message.content ?? "{}") as Record<string, unknown>
+      const parsed = JSON.parse(message.content ?? "{}")
+      text = parsed.text ?? ""
     } catch {
-      return
-    }
-
-    const msgType = message.message_type as string
-    let text = ""
-
-    if (msgType === "text") {
-      text = (parsed.text as string) ?? ""
-    } else if (msgType === "post" || msgType === "interactive") {
-      text = await this.extractContent(parsed, message.message_id)
-    } else if (msgType === "image") {
-      const imageKey = parsed.image_key as string
-      const ext = "png"
-      const localPath = imageKey
-        ? await this.downloadResource(message.message_id, imageKey, "image", `${imageKey}.${ext}`)
-        : null
-      text = localPath
-        ? `用户发送了一张图片，已保存到: ${localPath}`
-        : "用户发送了一张图片（下载失败）"
-    } else if (msgType === "file") {
-      const fileKey = (parsed.file_key ?? parsed.image_key) as string
-      const name = (parsed.file_name as string) ?? "file"
-      const localPath = fileKey
-        ? await this.downloadResource(message.message_id, fileKey, "file", name)
-        : null
-      text = localPath
-        ? `用户发送了文件「${name}」，已保存到: ${localPath}`
-        : `用户发送了文件「${name}」（下载失败）`
-    } else {
       return
     }
 
     if (!text.trim()) return
 
+    const chatId: string = message.chat_id ?? ""
+    const chatType: string = message.chat_type ?? "p2p"
+
+    // In group chats, require @mention if configured
     if (this.options.requireMention && chatType !== "p2p") {
       const mentions: any[] = message.mentions ?? []
-      if (!mentions.length) return
+      // @_user_1 is the conventional key for the first @-mentioned user (the bot)
+      const isMentioned = mentions.length > 0
+      if (!isMentioned) return
+      // Strip @mention text from message
       text = text.replace(/@\S+/g, "").trim()
-      if (!text.trim()) return
+      if (!text) return
     }
 
-    console.log(`[feishu] dispatching: chatId=${chatId} msgType=${msgType} text="${text}"`)
+    console.log(`[feishu] dispatching: chatId=${chatId} text="${text}" handlerSet=${!!this.messageHandler}`)
     this.messageHandler?.({
       platform: "feishu",
       chatId,
@@ -162,99 +140,48 @@ export class FeishuAdapter implements ChannelAdapter {
       text,
     })
   }
-
-  private async extractContent(body: Record<string, unknown>, messageId: string): Promise<string> {
-    if (typeof body.text === "string") return body.text
-    // Post: blocks under a language key or directly under "content"
-    const candidates: unknown[][] = []
-    for (const lang of ["zh_cn", "en_us", "ja_jp"]) {
-      const blocks = (body[lang] as Record<string, unknown>)?.content
-      if (Array.isArray(blocks)) candidates.push(blocks as unknown[][])
-    }
-    if (Array.isArray(body.content)) candidates.push(body.content as unknown[][])
-    for (const blocks of candidates) {
-      const parts: string[] = []
-      for (const block of blocks) {
-        for (const node of Array.isArray(block) ? block : [block]) {
-          if (!node || typeof node !== "object") continue
-          const n = node as Record<string, unknown>
-          if (n.tag === "text" && typeof n.text === "string" && n.text) {
-            parts.push(n.text)
-          } else if (n.tag === "img" && typeof n.image_key === "string") {
-            const p = await this.downloadResource(messageId, n.image_key as string, "image", `${n.image_key}.png`)
-            parts.push(p ? `[图片: ${p}]` : "[图片: 下载失败]")
-          }
-        }
-      }
-      if (parts.length) return parts.join("\n")
-    }
-    // Interactive card elements
-    const elements = (body.body as Record<string, unknown>)?.elements as unknown[]
-    if (Array.isArray(elements)) {
-      const parts: string[] = []
-      for (const el of elements) {
-        const e = el as Record<string, unknown>
-        if (e.tag === "markdown" && typeof e.content === "string") parts.push(e.content)
-        else if (e.tag === "div" && e.text && typeof (e.text as Record<string, unknown>).content === "string") {
-          parts.push((e.text as Record<string, unknown>).content as string)
-        }
-      }
-      if (parts.length) return parts.join("\n\n")
-    }
-    return ""
-  }
-
-  private async downloadResource(
-    messageId: string,
-    fileKey: string,
-    type: "image" | "file",
-    filename: string,
-  ): Promise<string | null> {
-    try {
-      const res = await this.client.im.messageResource.get({
-        path: { message_id: messageId, file_key: fileKey },
-        params: { type },
-      })
-      const stream = (res as any)?.getReadableStream?.()
-      if (!stream) return null
-      const chunks: Buffer[] = []
-      for await (const chunk of stream) chunks.push(Buffer.from(chunk))
-      if (!chunks.length) return null
-      mkdirSync(DOWNLOAD_DIR, { recursive: true })
-      const dest = join(DOWNLOAD_DIR, `${Date.now()}-${filename}`)
-      writeFileSync(dest, Buffer.concat(chunks))
-      console.log(`[feishu] saved resource: ${dest} (${chunks.reduce((s, c) => s + c.length, 0)} bytes)`)
-      return dest
-    } catch (err) {
-      console.error("[feishu] failed to download resource:", err)
-      return null
-    }
-  }
 }
 
 function buildCard(text: string): object {
   return {
-    config: { wide_screen_mode: true },
-    elements: [{ tag: "div", text: { tag: "lark_md", content: text } }],
+    schema: "2.0",
+    body: {
+      elements: [
+        {
+          tag: "markdown",
+          content: text,
+        },
+      ],
+    },
   }
 }
 
+// 工具状态和正文分成两个独立 element，互不影响各自的 markdown 渲染
 function buildSplitCard(status: string, text: string): object {
   const elements: object[] = []
 
   if (status) {
-    elements.push({ tag: "div", text: { tag: "lark_md", content: status } })
+    elements.push({
+      tag: "markdown",
+      content: status,
+    })
   }
 
   if (text) {
-    elements.push({ tag: "div", text: { tag: "lark_md", content: text } })
+    elements.push({
+      tag: "markdown",
+      content: text,
+    })
   }
 
   if (elements.length === 0) {
-    elements.push({ tag: "div", text: { tag: "lark_md", content: "思考中..." } })
+    elements.push({ tag: "markdown", content: "思考中..." })
   }
 
-  return { config: { wide_screen_mode: true }, elements }
+  return {
+    schema: "2.0",
+    body: { elements },
+  }
 }
 
 function truncateText(text: string): string {

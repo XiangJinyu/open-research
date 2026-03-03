@@ -59,19 +59,6 @@ python <skill-dir>/cli.py reply-message --msg-id <message_id> --text "Got it."
 python <skill-dir>/cli.py list-messages --chat-id <chat_id> --limit 20
 ```
 
-#### Download resources (images / files)
-
-```bash
-# Download an image from a message (file_key from list-messages output)
-python <skill-dir>/cli.py download --msg-id <message_id> --file-key <image_key> --type image --output photo.png
-
-# Download a file attachment
-python <skill-dir>/cli.py download --msg-id <message_id> --file-key <file_key> --type file --output report.pdf
-
-# Omit --output to save with file_key as filename
-python <skill-dir>/cli.py download --msg-id <message_id> --file-key <file_key>
-```
-
 #### Emoji reactions
 
 ```bash
@@ -150,7 +137,6 @@ Configure these in Feishu Open Platform → Permissions & Scopes:
 |------------------|----------------------------------------|
 | Send message     | `im:message:send_as_bot`               |
 | Read messages    | `im:message`                           |
-| Download files   | `im:resource`                          |
 | Reactions        | `im:message.reaction:write`            |
 | Group members    | `im:chat.members:read`                 |
 | Chat info        | `im:chat`                              |
@@ -161,8 +147,6 @@ Configure these in Feishu Open Platform → Permissions & Scopes:
 ## When to use
 
 - User asks to "send a message to the team" → `send-message`
-- User sends an image or file → the message content contains an `image_key` or
-  `file_key`; use `download` to save it locally, then process as needed
 - User asks to "react with thumbs up to that message" → `add-reaction`
 - User asks "who is in the project group?" → `get-members`
 - User asks to "write up a doc with the results" → `create-doc`, then guide

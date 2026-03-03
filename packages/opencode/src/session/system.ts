@@ -1,6 +1,3 @@
-import { homedir } from "os"
-import { join } from "path"
-
 import { Ripgrep } from "../file/ripgrep"
 
 import { Instance } from "../project/instance"
@@ -31,7 +28,6 @@ export namespace SystemPrompt {
 
   export async function environment(model: Provider.Model) {
     const project = Instance.project
-    const memorySpace = join(homedir(), ".openresearch", "memory_space")
     return [
       [
         `You are OpenResearch, powered by the model named ${model.api.id}. The exact model ID is ${model.providerID}/${model.api.id}`,
@@ -41,7 +37,6 @@ export namespace SystemPrompt {
         `  Is directory a git repo: ${project.vcs === "git" ? "yes" : "no"}`,
         `  Platform: ${process.platform}`,
         `  Today's date: ${new Date().toDateString()}`,
-        `  Shared memory space: ${memorySpace} — use this directory to store and retrieve files that need to persist across sessions or be shared globally (e.g. downloaded attachments, user-uploaded files, reusable assets). Create subdirectories as needed.`,
         `</env>`,
         `<directories>`,
         `  ${
