@@ -25,9 +25,9 @@ module.exports = {
   apps: [
     {
       name: "research-serve",
-      script: path.join(__dirname, "serve-wrapper.sh"),
-      interpreter: "bash",
-      args: "",
+      script: "research",
+      interpreter: "none",
+      args: `serve --port ${port}`,
       restart_delay: 3000,
       max_restarts: 999,
       env: {
@@ -40,7 +40,7 @@ module.exports = {
       script: "src/index.ts",
       interpreter: "bun",
       cwd: __dirname,
-      restart_delay: 5000,
+      restart_delay: 5000,  // 等 research-serve 就绪后再连
       max_restarts: 999,
       env: {
         NO_PROXY: "127.0.0.1,localhost",
