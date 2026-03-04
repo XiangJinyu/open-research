@@ -73,6 +73,56 @@ export class BridgeEngine {
       return
     }
 
+    if (cmd === "/stop") {
+      const sid = this.store.get(msg.platform, msg.chatId)
+      if (!sid) {
+        await adapter.sendText(msg.chatId, "当前没有活跃的会话。").catch(() => {})
+        return
+      }
+      const res = await this.sdk.session.abort({ sessionID: sid })
+      if (res.error) {
+        await adapter.sendText(msg.chatId, "停止失败，可能当前没有正在执行的任务。").catch(() => {})
+      } else {
+        const session = this.activeSessions.get(sid)
+        if (session) {
+          session.activeTools.clear()
+          if (session.messageId) {
+            await session.adapter.updateCard(session.chatId, session.messageId, "⛔ 已手动停止", session.buffer || "（已中止）").catch(() => {})
+          }
+          this.activeSessions.delete(sid)
+        }
+        await adapter.sendText(msg.chatId, "已停止当前任务。你可以继续发消息或用 /new 开启新对话。").catch(() => {})
+      }
+      return
+    }
+
+    if (cmd === "/compact") {
+      const sid = this.store.get(msg.platform, msg.chatId)
+      if (!sid) {
+        await adapter.sendText(msg.chatId, "当前没有活跃的会话，无需压缩。").catch(() => {})
+        return
+      }
+      await adapter.sendText(msg.chatId, "正在压缩上下文...").catch(() => {})
+      const res = await this.sdk.session.summarize({ sessionID: sid })
+      if (res.error) {
+        await adapter.sendText(msg.chatId, "压缩失败，请稍后再试。").catch(() => {})
+      } else {
+        await adapter.sendText(msg.chatId, "上下文已压缩，可以继续对话。").catch(() => {})
+      }
+      return
+    }
+
+    if (cmd === "/help") {
+      await adapter.sendText(msg.chatId, [
+        "可用命令：",
+        "  /new 或 /reset — 清除上下文，开启新对话",
+        "  /stop — 停止当前正在执行的任务",
+        "  /compact — 压缩对话上下文（节省 token）",
+        "  /help — 显示本帮助",
+      ].join("\n")).catch(() => {})
+      return
+    }
+
     // Resolve or create a session
     let sessionId = this.store.get(msg.platform, msg.chatId)
     if (!sessionId) {
