@@ -103,7 +103,12 @@ export class BridgeEngine {
         return
       }
       await adapter.sendText(msg.chatId, "正在压缩上下文...").catch(() => {})
-      const res = await this.sdk.session.summarize({ sessionID: sid })
+      const [providerID, ...modelRest] = (this.options.model ?? "").split("/")
+      const modelID = modelRest.join("/")
+      const res = await this.sdk.session.summarize({
+        sessionID: sid,
+        ...(providerID && modelID ? { providerID, modelID } : {}),
+      })
       if (res.error) {
         await adapter.sendText(msg.chatId, "压缩失败，请稍后再试。").catch(() => {})
       } else {
@@ -210,11 +215,12 @@ export class BridgeEngine {
             await this.sdk.permission.reply({ requestID, reply: "reject" }).catch(() => {})
             console.log(`[bridge] auto-rejected permission request ${requestID} for session ${sessionID}`)
           } else if (event.type === "session.error") {
-            const { sessionID, error } = event.properties as { sessionID: string; error: string }
+            const { sessionID, error } = event.properties as { sessionID: string; error: unknown }
+            const errorMsg = typeof error === "string" ? error : (error as any)?.message ?? JSON.stringify(error) ?? "未知错误"
             const session = this.activeSessions.get(sessionID)
             if (session?.messageId) {
               await session.adapter
-                .updateText(session.chatId, session.messageId, `错误：${error ?? "未知错误"}`)
+                .updateText(session.chatId, session.messageId, `错误：${errorMsg}`)
                 .catch(() => {})
             }
             this.activeSessions.delete(sessionID)

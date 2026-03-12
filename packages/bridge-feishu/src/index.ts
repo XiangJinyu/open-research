@@ -125,9 +125,8 @@ export class FeishuAdapter implements ChannelAdapter {
       text = await this.extractContent(parsed, message.message_id)
     } else if (msgType === "image") {
       const imageKey = parsed.image_key as string
-      const ext = "png"
       const localPath = imageKey
-        ? await this.downloadResource(message.message_id, imageKey, "image", `${imageKey}.${ext}`)
+        ? await this.downloadAndConvertImage(message.message_id, imageKey)
         : null
       text = localPath
         ? `用户发送了一张图片，已保存到: ${localPath}`
@@ -202,6 +201,35 @@ export class FeishuAdapter implements ChannelAdapter {
       if (parts.length) return parts.join("\n\n")
     }
     return ""
+  }
+
+  private async downloadAndConvertImage(messageId: string, imageKey: string): Promise<string | null> {
+    // Download to a temp path first, detect format, then save with correct extension
+    const tempPath = join(DOWNLOAD_DIR, `${Date.now()}-${imageKey}.tmp`)
+    const downloaded = await this.downloadResource(messageId, imageKey, "image", `${Date.now()}-${imageKey}.tmp`)
+    if (!downloaded) return null
+    // Detect actual format from file header
+    const { readFileSync, renameSync } = await import("fs")
+    const buf = readFileSync(downloaded)
+    let ext = "png"
+    if (buf[0] === 0xff && buf[1] === 0xd8) ext = "jpg"
+    else if (buf[0] === 0x89 && buf[1] === 0x50) ext = "png"
+    else if (buf[0] === 0x47 && buf[1] === 0x49) ext = "gif"
+    else if (buf[0] === 0x52 && buf[1] === 0x49) ext = "webp"
+    const finalPath = downloaded.replace(/\.tmp$/, `.${ext}`)
+    renameSync(downloaded, finalPath)
+    // If JPEG, convert to PNG so MIME type matches when sent to model
+    if (ext === "jpg") {
+      const { execSync } = await import("child_process")
+      const pngPath = finalPath.replace(/\.jpg$/, ".png")
+      try {
+        execSync(`sips -s format png "${finalPath}" --out "${pngPath}"`, { stdio: "ignore" })
+        return pngPath
+      } catch {
+        return finalPath
+      }
+    }
+    return finalPath
   }
 
   private async downloadResource(
