@@ -26,6 +26,8 @@ export namespace Tool {
   }
   export interface Info<Parameters extends z.ZodType = z.ZodType, M extends Metadata = Metadata> {
     id: string
+    /** If set, this tool is only available when the active agent name is in this list */
+    agents?: string[]
     init: (ctx?: InitContext) => Promise<{
       description: string
       parameters: Parameters

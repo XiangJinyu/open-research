@@ -17,7 +17,7 @@ const Artifact = z.object({
   collected: z.boolean(),
 })
 
-export const JournalTool = Tool.define("journal", {
+export const JournalTool = Object.assign(Tool.define("journal", {
   description: DESCRIPTION,
   parameters: z.object({
     region: z.enum(REGIONS).describe("Current region"),
@@ -103,4 +103,4 @@ export const JournalTool = Tool.define("journal", {
       },
     }
   },
-})
+}), { agents: ["game"] })

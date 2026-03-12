@@ -12,7 +12,7 @@ const REGIONS = [
   "chronicle_tower",
 ] as const
 
-export const ChallengeTool = Tool.define("challenge", {
+export const ChallengeTool = Object.assign(Tool.define("challenge", {
   description: DESCRIPTION,
   parameters: z.object({
     type: z.enum(["decode", "boss"]).describe("Challenge type"),
@@ -73,4 +73,4 @@ export const ChallengeTool = Tool.define("challenge", {
       },
     }
   },
-})
+}), { agents: ["game"] })

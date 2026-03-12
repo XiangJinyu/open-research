@@ -154,6 +154,9 @@ export namespace ToolRegistry {
           if (t.id === "apply_patch") return usePatch
           if (t.id === "edit" || t.id === "write") return !usePatch
 
+          // agent-scoped tools: only available when the active agent is listed
+          if (t.agents && t.agents.length > 0) return t.agents.includes(agent?.name ?? "")
+
           return true
         })
         .map(async (t) => {
